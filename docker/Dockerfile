@@ -28,6 +28,5 @@ RUN curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh > 
     && chsh -s $(which zsh)
 
 RUN sudo apt-get -y purge "^openjdk-*" \
-    && sudo apt-get -y install openjdk-8-jdk openjdk-8-jre maven \
-    && ln -sfn /usr/lib/jvm/java-8-openjdk-amd64/bin/java* /etc/alternatives
-ENV JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64/"
+    && sudo apt-get -y install openjdk-8-jdk openjdk-8-jre openjdk-11-jdk openjdk-11-jre maven
+

@@ -13,7 +13,9 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.slf4j.event.Level;
 
@@ -63,7 +65,8 @@ public class UpgradeFuzzingTest {
     private static final String HDFS_MINIDFS_BASEDIR = "hdfs.minidfs.basedir";
     UUID uuid;
 
-    void setUp() throws IOException {
+    @Before
+    public void setUp() throws IOException {
         conf = new Configuration();
         uuid = UUID.randomUUID();
         testDir = "/tmp/hadoop-" + uuid + "-test/";
@@ -76,6 +79,14 @@ public class UpgradeFuzzingTest {
         cluster.waitActive();
         fsn = cluster.getNamesystem();
         hdfs = cluster.getFileSystem();
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        if (cluster != null) {
+            cluster.shutdown();
+            cluster = null;
+        }
     }
 
     private void testSaveLoadImage() throws Exception {
@@ -124,18 +135,15 @@ public class UpgradeFuzzingTest {
     }
 
     @Fuzz
-    public void testFSImage(InputStream input) throws IOException {
+    public void testFSImage(InputStream input) throws Exception {
         try {
-            setUp();
-            testSaveLoadImage();
+            // setUp();
+            // testSaveLoadImage();
         } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         } finally {
-            if (cluster != null) {
-                cluster.shutdown();
-                cluster = null;
-            }
+            tearDown();
             // FileUtils.deleteDirectory(new File("/tmp/hadoop-" + uuid));
         }
     }
