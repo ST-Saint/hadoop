@@ -30,3 +30,9 @@ RUN curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh > 
 RUN sudo apt-get -y purge "^openjdk-*" \
     && sudo apt-get -y install openjdk-8-jdk openjdk-8-jre openjdk-11-jdk openjdk-11-jre maven
 
+RUN curl -L -s -S https://github.com/protocolbuffers/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz -o protobuf-2.5.0.tar.gz \
+    && mkdir protobuf \
+    && tar xzf protobuf-2.5.0.tar.gz --strip-components 1 -C protobuf && cd protobuf \
+    && ./configure \
+    && make -j$(nproc) \
+    && sudo make install

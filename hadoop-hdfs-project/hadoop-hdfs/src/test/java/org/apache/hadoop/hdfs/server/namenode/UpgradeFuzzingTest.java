@@ -1,5 +1,17 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.junit.Assert.assertTrue;
+
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -18,16 +30,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.slf4j.event.Level;
-
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
 import edu.berkeley.cs.jqf.fuzz.Fuzz;
 import edu.berkeley.cs.jqf.fuzz.JQF;
@@ -65,6 +67,19 @@ public class UpgradeFuzzingTest {
     private static final String HDFS_MINIDFS_BASEDIR = "hdfs.minidfs.basedir";
     UUID uuid;
 
+    class MyThread extends Thread {
+        @Override
+        public void run() {
+            System.out.println("enter thread " + Thread.currentThread().getName());
+            try {
+                Thread.currentThread().sleep(5000);
+            } catch (InterruptedException e) {
+                // TODO: handle exception
+            }
+            System.out.println("thread " + Thread.currentThread().getName() + " done");
+        }
+    }
+
     @Before
     public void setUp() throws IOException {
         conf = new Configuration();
@@ -86,6 +101,20 @@ public class UpgradeFuzzingTest {
         if (cluster != null) {
             cluster.shutdown();
             cluster = null;
+        }
+    }
+
+    @Fuzz
+    public void testFSImage(InputStream input) throws Exception {
+        try {
+            // setUp();
+            // testSaveLoadImage();
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } finally {
+            // tearDown();
+            // FileUtils.deleteDirectory(new File("/tmp/hadoop-" + uuid));
         }
     }
 
@@ -132,20 +161,6 @@ public class UpgradeFuzzingTest {
 
         hdfs.rename(sub2file1, sub2file2);
         checkImage(s);
-    }
-
-    @Fuzz
-    public void testFSImage(InputStream input) throws Exception {
-        try {
-            // setUp();
-            // testSaveLoadImage();
-        } catch (Exception e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } finally {
-            tearDown();
-            // FileUtils.deleteDirectory(new File("/tmp/hadoop-" + uuid));
-        }
     }
 
     void fuzzFSImage() {
