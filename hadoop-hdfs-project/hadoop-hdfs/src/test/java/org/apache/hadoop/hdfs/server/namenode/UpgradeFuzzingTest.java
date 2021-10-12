@@ -84,12 +84,12 @@ public class UpgradeFuzzingTest {
     public void setUp() throws IOException {
         conf = new Configuration();
         uuid = UUID.randomUUID();
-        testDir = "/tmp/hadoop-" + uuid + "-test/";
+        testDir = "/tmp/hadoop-yayu" + uuid + "-test/";
         File testDirFile = new File(testDir);
         if (!testDirFile.exists()) {
             testDirFile.mkdir();
         }
-        conf.set(HDFS_MINIDFS_BASEDIR, "/tmp/hadoop-" + uuid);
+        conf.set(HDFS_MINIDFS_BASEDIR, "/tmp/hadoop-yayu" + uuid);
         cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
         cluster.waitActive();
         fsn = cluster.getNamesystem();
