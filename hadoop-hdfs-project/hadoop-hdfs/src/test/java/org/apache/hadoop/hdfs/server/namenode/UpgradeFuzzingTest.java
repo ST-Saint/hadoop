@@ -2,16 +2,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertTrue;
 
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -30,6 +20,16 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.slf4j.event.Level;
+
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 import edu.berkeley.cs.jqf.fuzz.Fuzz;
 import edu.berkeley.cs.jqf.fuzz.JQF;
@@ -80,7 +80,7 @@ public class UpgradeFuzzingTest {
         }
     }
 
-    @Before
+    // @Before
     public void setUp() throws IOException {
         conf = new Configuration();
         uuid = UUID.randomUUID();
@@ -96,7 +96,7 @@ public class UpgradeFuzzingTest {
         hdfs = cluster.getFileSystem();
     }
 
-    @After
+    // @After
     public void tearDown() throws Exception {
         if (cluster != null) {
             cluster.shutdown();
@@ -107,13 +107,13 @@ public class UpgradeFuzzingTest {
     @Fuzz
     public void testFSImage(InputStream input) throws Exception {
         try {
-            // setUp();
-            // testSaveLoadImage();
+            setUp();
+            testSaveLoadImage();
         } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         } finally {
-            // tearDown();
+            tearDown();
             // FileUtils.deleteDirectory(new File("/tmp/hadoop-" + uuid));
         }
     }
