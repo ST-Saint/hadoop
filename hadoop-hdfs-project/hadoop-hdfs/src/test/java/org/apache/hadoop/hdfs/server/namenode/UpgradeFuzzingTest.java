@@ -65,7 +65,7 @@ public class UpgradeFuzzingTest {
     FSNamesystem fsn;
     DistributedFileSystem hdfs;
     private static final String HDFS_MINIDFS_BASEDIR = "hdfs.minidfs.basedir";
-    UUID uuid;
+    // UUID uuid;
 
     class MyThread extends Thread {
         @Override
@@ -82,13 +82,14 @@ public class UpgradeFuzzingTest {
 
     public void setUp() throws IOException {
         conf = new Configuration();
-        uuid = UUID.randomUUID();
-        testDir = "/tmp/hadoop-" + uuid + "-test/";
+        // uuid = UUID.randomUUID();
+        String uuid = "uuid";
+        testDir = "/home/yayu/tmp/hadoop-" + uuid + "-test/";
         File testDirFile = new File(testDir);
         if (!testDirFile.exists()) {
             testDirFile.mkdir();
         }
-        conf.set(HDFS_MINIDFS_BASEDIR, "/tmp/hadoop-" + uuid);
+        conf.set(HDFS_MINIDFS_BASEDIR, "/home/yayu/tmp/hadoop-" + uuid);
         cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
         cluster.waitActive();
         fsn = cluster.getNamesystem();
