@@ -43,43 +43,43 @@ ENV DEBCONF_TERSE true
 # hadolint ignore=DL3008
 RUN apt-get -q update \
     && apt-get -q install -y --no-install-recommends \
-        apt-utils \
-        build-essential \
-        bzip2 \
-        clang \
-        curl \
-        doxygen \
-        fuse \
-        g++ \
-        gcc \
-        git \
-        gnupg-agent \
-        libbz2-dev \
-        libcurl4-openssl-dev \
-        libfuse-dev \
-        libprotobuf-dev \
-        libprotoc-dev \
-        libsasl2-dev \
-        libsnappy-dev \
-        libssl-dev \
-        libtool \
-        libzstd1-dev \
-        locales \
-        make \
-        pinentry-curses \
-        pkg-config \
-        python \
-        python2.7 \
-        python-pip \
-        python-pkg-resources \
-        python-setuptools \
-        python-wheel \
-        rsync \
-        software-properties-common \
-        snappy \
-        sudo \
-        valgrind \
-        zlib1g-dev \
+    apt-utils \
+    build-essential \
+    bzip2 \
+    clang \
+    curl \
+    doxygen \
+    fuse \
+    g++ \
+    gcc \
+    git \
+    gnupg-agent \
+    libbz2-dev \
+    libcurl4-openssl-dev \
+    libfuse-dev \
+    libprotobuf-dev \
+    libprotoc-dev \
+    libsasl2-dev \
+    libsnappy-dev \
+    libssl-dev \
+    libtool \
+    libzstd1-dev \
+    locales \
+    make \
+    pinentry-curses \
+    pkg-config \
+    python \
+    python2.7 \
+    python-pip \
+    python-pkg-resources \
+    python-setuptools \
+    python-wheel \
+    rsync \
+    software-properties-common \
+    snappy \
+    sudo \
+    valgrind \
+    zlib1g-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -99,8 +99,8 @@ RUN apt-get -q update \
 ######
 RUN mkdir -p /opt/cmake \
     && curl -L -s -S \
-      https://cmake.org/files/v3.1/cmake-3.1.0-Linux-x86_64.tar.gz \
-      -o /opt/cmake.tar.gz \
+    https://cmake.org/files/v3.1/cmake-3.1.0-Linux-x86_64.tar.gz \
+    -o /opt/cmake.tar.gz \
     && tar xzf /opt/cmake.tar.gz --strip-components 1 -C /opt/cmake
 ENV CMAKE_HOME /opt/cmake
 ENV PATH "${PATH}:/opt/cmake/bin"
@@ -111,8 +111,8 @@ ENV PATH "${PATH}:/opt/cmake/bin"
 # hadolint ignore=DL3003
 RUN mkdir -p /opt/protobuf-src \
     && curl -L -s -S \
-      https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz \
-      -o /opt/protobuf.tar.gz \
+    https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz \
+    -o /opt/protobuf.tar.gz \
     && tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src \
     && cd /opt/protobuf-src \
     && ./configure --prefix=/opt/protobuf \
@@ -162,12 +162,15 @@ RUN apt-get -q update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+RUN pip install --upgrade pip==9.0.0
+
 ####
 # Install pylint at fixed version (2.0.0 removed python2 support)
 # https://github.com/PyCQA/pylint/issues/2294
 ####
 RUN pip2 install \
     configparser==4.0.2 \
+    isort==4.3.21 \
     pylint==1.9.2
 
 ####
@@ -198,11 +201,11 @@ RUN curl -s -S https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
 # Install hadolint
 ####
 RUN curl -L -s -S \
-        https://github.com/hadolint/hadolint/releases/download/v1.11.1/hadolint-Linux-x86_64 \
-        -o /bin/hadolint \
-   && chmod a+rx /bin/hadolint \
-   && shasum -a 512 /bin/hadolint | \
-        awk '$1!="734e37c1f6619cbbd86b9b249e69c9af8ee1ea87a2b1ff71dccda412e9dac35e63425225a95d71572091a3f0a11e9a04c2fc25d9e91b840530c26af32b9891ca" {exit(1)}'
+    https://github.com/hadolint/hadolint/releases/download/v1.11.1/hadolint-Linux-x86_64 \
+    -o /bin/hadolint \
+    && chmod a+rx /bin/hadolint \
+    && shasum -a 512 /bin/hadolint | \
+    awk '$1!="734e37c1f6619cbbd86b9b249e69c9af8ee1ea87a2b1ff71dccda412e9dac35e63425225a95d71572091a3f0a11e9a04c2fc25d9e91b840530c26af32b9891ca" {exit(1)}'
 
 ###
 # Avoid out of memory errors in builds
