@@ -65,7 +65,7 @@ public class UpgradeFuzzingTest {
     FSNamesystem fsn;
     DistributedFileSystem hdfs;
     private static final String HDFS_MINIDFS_BASEDIR = "hdfs.minidfs.basedir";
-    UUID uuid;
+    // UUID uuid;
 
     class MyThread extends Thread {
         @Override
@@ -83,13 +83,14 @@ public class UpgradeFuzzingTest {
     // @Before
     public void setUp() throws IOException {
         conf = new Configuration();
-        uuid = UUID.randomUUID();
-        testDir = "/tmp/hadoop-yayu" + uuid + "-test/";
+        // uuid = UUID.randomUUID();
+        String uuid = "uuid";
+        testDir = "/home/yayu/tmp/hadoop-yayu-" + uuid + "-test/";
         File testDirFile = new File(testDir);
         if (!testDirFile.exists()) {
             testDirFile.mkdir();
         }
-        conf.set(HDFS_MINIDFS_BASEDIR, "/tmp/hadoop-yayu" + uuid);
+        conf.set(HDFS_MINIDFS_BASEDIR, "/home/yayu/tmp/hadoop-yayu-" + uuid);
         cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
         cluster.waitActive();
         fsn = cluster.getNamesystem();
@@ -108,7 +109,11 @@ public class UpgradeFuzzingTest {
     public void testFSImage(InputStream input) throws Exception {
         try {
             setUp();
-            testSaveLoadImage();
+            File imageFile = saveFSImageToTempFile();
+            final Path root = new Path("/");
+            hdfs.allowSnapshot(root);
+            Path snapShptFile = hdfs.createSnapshot(root, "s0");
+            // testSaveLoadImage();
         } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -119,48 +124,7 @@ public class UpgradeFuzzingTest {
     }
 
     private void testSaveLoadImage() throws Exception {
-        int s = 0;
-        // make changes to the namesystem
-        hdfs.mkdirs(dir);
-        SnapshotTestHelper.createSnapshot(hdfs, dir, "s" + ++s);
-        Path sub1 = new Path(dir, "sub1");
-        hdfs.mkdirs(sub1);
-        hdfs.setPermission(sub1, new FsPermission((short) 0777));
-        Path sub11 = new Path(sub1, "sub11");
-        hdfs.mkdirs(sub11);
-        checkImage(s);
-
-        hdfs.createSnapshot(dir, "s" + ++s);
-        Path sub1file1 = new Path(sub1, "sub1file1");
-        Path sub1file2 = new Path(sub1, "sub1file2");
-        DFSTestUtil.createFile(hdfs, sub1file1, BLOCKSIZE, (short) 1, seed);
-        DFSTestUtil.createFile(hdfs, sub1file2, BLOCKSIZE, (short) 1, seed);
-        checkImage(s);
-
-        hdfs.createSnapshot(dir, "s" + ++s);
-        Path sub2 = new Path(dir, "sub2");
-        Path sub2file1 = new Path(sub2, "sub2file1");
-        Path sub2file2 = new Path(sub2, "sub2file2");
-        DFSTestUtil.createFile(hdfs, sub2file1, BLOCKSIZE, (short) 1, seed);
-        DFSTestUtil.createFile(hdfs, sub2file2, BLOCKSIZE, (short) 1, seed);
-        checkImage(s);
-
-        hdfs.createSnapshot(dir, "s" + ++s);
-        hdfs.setReplication(sub1file1, (short) 1);
-        hdfs.delete(sub1file2, true);
-        hdfs.setOwner(sub2, "dr.who", "unknown");
-        hdfs.delete(sub2file1, true);
-        checkImage(s);
-
-        hdfs.createSnapshot(dir, "s" + ++s);
-        Path sub1_sub2file2 = new Path(sub1, "sub2file2");
-        hdfs.rename(sub2file2, sub1_sub2file2);
-
-        hdfs.rename(sub1file1, sub2file1);
-        checkImage(s);
-
-        hdfs.rename(sub2file1, sub2file2);
-        checkImage(s);
+        hdfs.createSnapshot(dir, "s0");
     }
 
     void fuzzFSImage() {
