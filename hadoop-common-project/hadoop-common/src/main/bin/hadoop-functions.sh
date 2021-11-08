@@ -2276,6 +2276,7 @@ function hadoop_secure_daemon_handler
       ##COMPAT  - differenticate between --daemon start and nothing
       # "nothing" shouldn't detach
       if [[ "${daemonmode}" = "default" ]]; then
+
         hadoop_start_secure_daemon "${daemonname}" "${classname}" \
         "${daemon_pidfile}" "${daemon_outfile}" \
         "${priv_errfile}" "${priv_pidfile}" "$@"
