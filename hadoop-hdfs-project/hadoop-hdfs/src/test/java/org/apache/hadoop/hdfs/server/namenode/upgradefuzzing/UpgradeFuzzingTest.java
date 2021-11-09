@@ -1,4 +1,4 @@
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.namenode.upgradefuzzing;
 
 import static org.junit.Assert.assertTrue;
 
@@ -12,6 +12,12 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.FsShellGenerator;
+import org.apache.hadoop.hdfs.server.namenode.FSImage;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.util.Canceler;
@@ -28,6 +34,7 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -64,16 +71,27 @@ public class UpgradeFuzzingTest {
     static final long txid = 1;
     private final Path dir = new Path("/TestSnapshot");
 
-    Configuration conf = new Configuration();
+    Configuration conf;
     MiniDFSCluster cluster;
     FSNamesystem fsn;
     DistributedFileSystem hdfs;
-    private static final String HDFS_MINIDFS_BASEDIR = "hdfs.minidfs.basedir";
-    // UUID uuid;
-    //
+    UUID uuid;
 
-    public void pretest() throws EXception{
-        // NameNode namenode = NameNode.createNameNode(new String[], conf);
+
+    UpgradeFuzzingTest(){
+        conf = new Configuration();
+        uuid = UUID.randomUUID();
+        conf.set("hadoop.tmp.dir", "/home/yayu/tmp/hdfs-" + uuid.toString());
+        conf.set("fs.defaultFS", "hdfs://localhost:" + new Random().nextInt(1024) + 10000);
+        conf.set("dfs.replication", "1");
+    }
+
+    private static final String HDFS_MINIDFS_BASEDIR = "hdfs.minidfs.basedir";
+
+    public void pretest() throws Exception {
+        NameNode namenode = NameNode.createNameNode(new String[0], conf);
+        DataNode datanode = DataNode.createDataNode(new String[0], conf);
+        // namenode.join();
     }
 
     // @Before
@@ -107,23 +125,37 @@ public class UpgradeFuzzingTest {
     }
 
     @Test
-    public void testCommand() {
+    public void testCommand() throws Exception {
         FsShell shell = new FsShell();
         conf = new Configuration();
         shell.setConf(conf);
-        String cmd = generateFuzzingCommand();
+        FsShellGenerator fsg = new FsShellGenerator(new Random());
+        for (int i = 0; i < 1000; ++i) {
+            String[] cmd = fsg.generate();
+            FileWriter fw = new FileWriter("upgradefuzz.log", true);
+            fw.write(String.join(" ", cmd) + "\n");
+            fw.close();
+        }
         int res;
         try {
-            res = ToolRunner.run(shell, cmd);
+            // res = ToolRunner.run(shell, cmd);
         } finally {
             shell.close();
         }
-        System.exit(res);
     }
 
-    private String generateFuzzingCommand() {
-        Random rand = new Random();
-        rand.randInt();
-        return null;
+    @Fuzz
+    public void fuzzCommand() throws Exception {
+        FsShell shell = new FsShell();
+        conf = new Configuration();
+        shell.setConf(conf);
+        FsShellGenerator fsg = new FsShellGenerator(new Random());
+        String[] cmd = fsg.generate();
+        int res;
+        try {
+            // res = ToolRunner.run(shell, cmd);
+        } finally {
+            shell.close();
+        }
     }
 }
