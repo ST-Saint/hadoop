@@ -77,11 +77,13 @@ public class UpgradeFuzzingTest {
     DistributedFileSystem hdfs;
     UUID uuid;
 
-
-    UpgradeFuzzingTest(){
+    public UpgradeFuzzingTest() {
         conf = new Configuration();
         uuid = UUID.randomUUID();
         conf.set("hadoop.tmp.dir", "/home/yayu/tmp/hdfs-" + uuid.toString());
+        conf.set("hadoop.home.dir", "/home/yayu/tmp/hdfs-" + uuid.toString());
+        conf.set("hadoop.log.dir", "/home/yayu/tmp/hdfs-" + uuid.toString() + "/logs");
+        conf.set("yarn.log.dir", "/home/yayu/tmp/hdfs-" + uuid.toString() + "/logs");
         conf.set("fs.defaultFS", "hdfs://localhost:" + new Random().nextInt(1024) + 10000);
         conf.set("dfs.replication", "1");
     }
@@ -127,7 +129,6 @@ public class UpgradeFuzzingTest {
     @Test
     public void testCommand() throws Exception {
         FsShell shell = new FsShell();
-        conf = new Configuration();
         shell.setConf(conf);
         FsShellGenerator fsg = new FsShellGenerator(new Random());
         for (int i = 0; i < 1000; ++i) {
@@ -145,9 +146,11 @@ public class UpgradeFuzzingTest {
     }
 
     @Fuzz
-    public void fuzzCommand() throws Exception {
+    public void fuzzCommand(InputStream input) throws Exception {
         FsShell shell = new FsShell();
-        conf = new Configuration();
+        FileWriter fw = new FileWriter("upgradefuzz.log", true);
+        fw.write(conf.get("hadoop.log.dir") + "\n");
+        fw.close();
         shell.setConf(conf);
         FsShellGenerator fsg = new FsShellGenerator(new Random());
         String[] cmd = fsg.generate();

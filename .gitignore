@@ -10,6 +10,7 @@
 *.vcxproj.user
 *.patch
 *.diff
+*.class
 .idea
 .svn
 .classpath
