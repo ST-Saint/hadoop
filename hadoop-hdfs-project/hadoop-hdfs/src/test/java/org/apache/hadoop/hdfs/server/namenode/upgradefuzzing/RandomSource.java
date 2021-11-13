@@ -23,7 +23,7 @@ public class RandomSource {
         return wrapped.getInt();
     }
 
-    public Integer nexInteger(int bound){
+    public Integer nextInt(int bound){
         byte[] bytes = Arrays.copyOfRange(source, cursor, cursor + 4);
         cursor+=4;
         ByteBuffer wrapped = ByteBuffer.wrap(bytes);

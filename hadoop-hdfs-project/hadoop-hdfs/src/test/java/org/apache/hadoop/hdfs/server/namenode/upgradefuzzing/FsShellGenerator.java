@@ -4,15 +4,16 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
 public class FsShellGenerator {
-    Random rnd;
+    RandomSource rnd;
 
-    FsShellGenerator(Random rand) {
-        this.rnd = rand;
+    FsShellGenerator(InputStream is) throws IOException {
+        this.rnd = new RandomSource(is);
     }
 
     public String[] generate() throws Exception {
