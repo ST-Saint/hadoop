@@ -115,6 +115,92 @@ public class FuzzingTest {
     }
 
     public static void pretest() throws Exception {
+        MiniCluster minicluster = new MiniCluster();
+        minicluster.startCluster();
+    }
+
+
+    // @Before
+    public void setUp() throws IOException {
+        // uuid = UUID.randomUUID();
+        String uuid = "uuid";
+        testDir = "/home/yayu/tmp/hadoop-yayu-" + uuid + "-test/";
+        File testDirFile = new File(testDir);
+        if (!testDirFile.exists()) {
+            testDirFile.mkdir();
+        }
+        conf.set(HDFS_MINIDFS_BASEDIR, "/home/yayu/tmp/hadoop-yayu-" + uuid);
+        cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
+        cluster.waitActive();
+        fsn = cluster.getNamesystem();
+        hdfs = cluster.getFileSystem();
+    }
+
+    // @After
+    public void tearDown() throws Exception {
+        if (cluster != null) {
+            cluster.shutdown();
+            cluster = null;
+        }
+    }
+
+    @Test
+    public void testStartupTime() throws Exception {
+        setUp();
+        tearDown();
+    }
+
+    @Test
+    public void testCommand() throws Exception {
+        FsShell shell = new FsShell();
+        conf.setQuietMode(false);
+        shell.setConf(conf);
+        File seedFile = new File("/home/yayu/Project/Upgrade-Fuzzing/hadoop-3.3.1/fuzz-seeds/seed");
+        InputStream is = new FileInputStream(seedFile);
+        FsShellGenerator fsg = new FsShellGenerator(is);
+        String[] cmd = null;
+        for (int i = 0; i < 1; ++i) {
+            cmd = fsg.generate();
+            FileWriter fw = new FileWriter("upgradefuzz.log", true);
+            fw.write(String.join(" ", cmd) + "\n");
+            fw.close();
+        }
+        // cmd = new String[] { "-get", "-crc", "/file4", "/home/yayu/tmp/localsrc/file3" };
+        // cmd = new String[] { "-get", "/file4", "/home/yayu/tmp/localsrc/file3" };
+        int res;
+        try {
+            res = ToolRunner.run(shell, cmd);
+        } finally {
+            shell.close();
+        }
+        byte[] b = new byte[32768];
+        new Random().nextBytes(b);
+        Files.write(seedFile.toPath(), b);
+    }
+
+    @Fuzz
+    public void fuzzCommand(InputStream input) throws Exception {
+        FsShell shell = new FsShell();
+        // FileWriter fw = new FileWriter("upgradefuzz.log", true);
+        // fw.write(conf.get("hadoop.log.dir") + "\n");
+        // fw.close();
+        shell.setConf(conf);
+        FsShellGenerator fsg = new FsShellGenerator(input);
+        String[] cmd = fsg.generate();
+        int res;
+        try {
+            // res = ToolRunner.run(shell, cmd);
+        } finally {
+            shell.close();
+        }
+    }
+
+    public static void main(String[] argv) throws Exception {
+        FuzzingTest test = new FuzzingTest();
+        test.testCommand();
+    }
+
+    public static void startDfsCluster() throws Exception {
         Configuration hdfsClusterConf = new HdfsConfiguration();
         hdfsClusterConf.set("hadoop.tmp.dir", "/home/yayu/tmp/hdfs-" + "0");
         hdfsClusterConf.set("hadoop.home.dir", "/home/yayu/tmp/hdfs-" + "0");
@@ -187,83 +273,5 @@ public class FuzzingTest {
         // }
         // DataNode datanode = DataNode.createDataNode(new String[0], hdfsClusterConf);
         // namenode.join();
-    }
-
-    // @Before
-    public void setUp() throws IOException {
-        // uuid = UUID.randomUUID();
-        String uuid = "uuid";
-        testDir = "/home/yayu/tmp/hadoop-yayu-" + uuid + "-test/";
-        File testDirFile = new File(testDir);
-        if (!testDirFile.exists()) {
-            testDirFile.mkdir();
-        }
-        conf.set(HDFS_MINIDFS_BASEDIR, "/home/yayu/tmp/hadoop-yayu-" + uuid);
-        cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
-        cluster.waitActive();
-        fsn = cluster.getNamesystem();
-        hdfs = cluster.getFileSystem();
-    }
-
-    // @After
-    public void tearDown() throws Exception {
-        if (cluster != null) {
-            cluster.shutdown();
-            cluster = null;
-        }
-    }
-
-    @Test
-    public void testStartupTime() throws Exception {
-        setUp();
-        tearDown();
-    }
-
-    @Test
-    public void testCommand() throws Exception {
-        FsShell shell = new FsShell();
-        shell.setConf(conf);
-        File seedFile = new File("/home/yayu/Project/Upgrade-Fuzzing/hadoop-3.3.1/fuzz-seeds/seed");
-        InputStream is = new FileInputStream(seedFile);
-        FsShellGenerator fsg = new FsShellGenerator(is);
-        String[] cmd = null;
-        for (int i = 0; i < 1; ++i) {
-            cmd = fsg.generate();
-            FileWriter fw = new FileWriter("upgradefuzz.log", true);
-            fw.write(String.join(" ", cmd) + "\n");
-            fw.close();
-        }
-        cmd = new String[] { "-get", "-crc", "/file4", "/home/yayu/tmp/localsrc/file3" };
-        int res;
-        try {
-            res = ToolRunner.run(shell, cmd);
-        } finally {
-            shell.close();
-        }
-        byte[] b = new byte[32768];
-        new Random().nextBytes(b);
-        Files.write(seedFile.toPath(), b);
-    }
-
-    @Fuzz
-    public void fuzzCommand(InputStream input) throws Exception {
-        FsShell shell = new FsShell();
-        // FileWriter fw = new FileWriter("upgradefuzz.log", true);
-        // fw.write(conf.get("hadoop.log.dir") + "\n");
-        // fw.close();
-        // shell.setConf(conf);
-        FsShellGenerator fsg = new FsShellGenerator(input);
-        String[] cmd = fsg.generate();
-        int res;
-        try {
-            // res = ToolRunner.run(shell, cmd);
-        } finally {
-            shell.close();
-        }
-    }
-
-    public static void main(String[] argv) throws Exception {
-        FuzzingTest test = new FuzzingTest();
-        test.testCommand();
     }
 }

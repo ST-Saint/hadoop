@@ -45,6 +45,13 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.event.Level;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.BasicParser;
+
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
 public class MiniCluster {
@@ -63,9 +70,12 @@ public class MiniCluster {
     static final int BLOCKSIZE = 1024;
     static final long txid = 1;
 
+    private Options options;
+    private CommandLine cmdLine;
+
     public static final String HDFS_MINIDFS_BASEDIR = "hdfs.minidfs.basedir";
 
-    private void startCluster() throws IOException, InterruptedException {
+    public void startCluster() throws IOException, InterruptedException {
         conf = new Configuration();
         // conf.set("hadoop.tmp.dir", "/home/yayu/tmp/hdfs-" + "0");
         conf.set(HDFS_MINIDFS_BASEDIR, "/home/yayu/tmp/minicluster-0");
@@ -77,7 +87,7 @@ public class MiniCluster {
         builder.nameNodeHttpPort(nameNodeHttpPort);
         builder.checkDataNodeAddrConfig(true);
         builder.checkDataNodeHostConfig(true);
-        Thread.sleep(5000);
+
         cluster = builder.build();
         cluster.waitActive();
         fsn = cluster.getNamesystem();
@@ -85,8 +95,41 @@ public class MiniCluster {
         // cluster.getnamenode
     }
 
+    public void startAndShutdown() throws Exception {
+        conf = new Configuration();
+        // conf.set("hadoop.tmp.dir", "/home/yayu/tmp/hdfs-" + "0");
+        conf.set(HDFS_MINIDFS_BASEDIR, "/home/yayu/tmp/minicluster-0");
+        conf.set(DFS_DATANODE_ADDRESS_KEY, String.valueOf(dataNodePort));
+        conf.set(DFS_DATANODE_IPC_ADDRESS_KEY, dataNodeIPCPort);
+        conf.set(DFS_DATANODE_HTTP_ADDRESS_KEY, dataNodeHttpPort);
+
+        MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES);
+        builder.nameNodePort(nameNodePort);
+        builder.nameNodeHttpPort(nameNodeHttpPort);
+        builder.checkDataNodeAddrConfig(true);
+        builder.checkDataNodeHostConfig(true);
+        cluster = builder.build();
+        cluster.waitActive();
+        if (cluster != null) {
+            cluster.shutdown();
+        }
+    }
+
+    public void start(String[] argv) throws Exception {
+        options = new Options();
+        options.addOption("h", "help", false, "print this message");
+        options.addOption("a", "alive", false, "keep alive");
+        cmdLine = new BasicParser().parse(options, argv);
+        if (cmdLine.hasOption("alive")) {
+            startCluster();
+        } else {
+            startAndShutdown();
+        }
+    }
+
     public static void main(String[] argv) throws Exception {
         MiniCluster minicluster = new MiniCluster();
-        minicluster.startCluster();
+        minicluster.start(argv);
     }
+
 }

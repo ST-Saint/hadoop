@@ -19,6 +19,19 @@ upgradefuzz_dir="hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop
 
 javac -cp "${classpath}" ${upgradefuzz_dir}/*.java
 
-echo "$1"
+if [[ -z "$AFL_DIR" ]]; then
+    export AFL_DIR=$HOME/Project/Upgrade-Fuzzing/afl
+    if [ ! -d $AFL_DIR ]; then
+        export AFL_DIR=$HOME/afl
+    fi
+fi
+if [[ -z "$JQF_DIR" ]]; then
+    JQF_DIR=$HOME/Project/Upgrade-Fuzzing/jqf
+    if [ ! -d $JQF_DIR ]; then
+        JQF_DIR=$HOME/jqf
+    fi
+fi
 
-java -cp ${classpath} org.apache.hadoop.hdfs.server.namenode.upgradefuzzing."$1" "${@:2}"
+JQF_SID=$(( ( RANDOM % 1000 )  + 1 ))
+echo $JQF_SID
+$JQF_DIR/bin/jqf-afl-fuzz -c ${classpath} -i fuzz-seeds -m 32768 -v -t 6000 -S $JQF_SID org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.FuzzingTest fuzzCommand

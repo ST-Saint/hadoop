@@ -17,8 +17,4 @@ classpath=${dependencies}\
 
 upgradefuzz_dir="hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/upgradefuzzing/"
 
-javac -cp "${classpath}" ${upgradefuzz_dir}/*.java
-
-echo "$1"
-
-java -cp ${classpath} org.apache.hadoop.hdfs.server.namenode.upgradefuzzing."$1" "${@:2}"
+java -cp ${classpath} org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.MiniCluster

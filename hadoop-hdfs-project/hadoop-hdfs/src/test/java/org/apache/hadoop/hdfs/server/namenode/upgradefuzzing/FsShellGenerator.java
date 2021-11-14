@@ -236,7 +236,7 @@ public class FsShellGenerator {
     public class rmCommand extends Command {
         rmCommand() {
             cmd = "-rm";
-            options = new String[] { "-f", "-r", "-R", "-skipTrash", "-safety" };
+            options = new String[] { "-f", "-r", "-R", "-skipTrash", "-safely" };
         }
 
         @Override
