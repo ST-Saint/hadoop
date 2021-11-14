@@ -180,12 +180,17 @@ RUN pip2 install python-dateutil==2.7.3
 # Install node.js for web UI framework (4.2.6 ships with Xenial)
 ###
 # hadolint ignore=DL3008, DL3016
-RUN apt-get -q update \
-    && apt-get install -y --no-install-recommends nodejs npm \
+# RUN apt-get -q update \
+#     && apt-get install -y --no-install-recommends nodejs npm \
+#     && apt-get clean \
+#     && rm -rf /var/lib/apt/lists/* \
+#     && ln -s /usr/bin/nodejs /usr/bin/node \
+#     && npm install npm@latest -g \
+#     && npm install -g jshint
+RUN curl -L -s -S https://deb.nodesource.com/setup_10.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && ln -s /usr/bin/nodejs /usr/bin/node \
-    && npm install npm@latest -g \
     && npm install -g jshint
 
 ###
