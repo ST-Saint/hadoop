@@ -54,9 +54,9 @@ public class MiniCluster {
     DistributedFileSystem hdfs;
     private int nameNodePort = 10240;
     private int nameNodeHttpPort = 10241;
-    private int dataNodePort = 10242;
-    private int dataNodeIPCPort = 10243;
-    private int dataNodeHttpPort = 10244;
+    private String dataNodePort = "127.0.0.1:10242";
+    private String dataNodeIPCPort = "127.0.0.1:10243";
+    private String dataNodeHttpPort = "127.0.0.1:10244";
 
     static final long seed = 0;
     static final short NUM_DATANODES = 1;
@@ -65,16 +65,19 @@ public class MiniCluster {
 
     public static final String HDFS_MINIDFS_BASEDIR = "hdfs.minidfs.basedir";
 
-    private void startCluster() throws IOException {
+    private void startCluster() throws IOException, InterruptedException {
         conf = new Configuration();
         // conf.set("hadoop.tmp.dir", "/home/yayu/tmp/hdfs-" + "0");
         conf.set(HDFS_MINIDFS_BASEDIR, "/home/yayu/tmp/minicluster-0");
         conf.set(DFS_DATANODE_ADDRESS_KEY, String.valueOf(dataNodePort));
-        conf.set(DFS_DATANODE_IPC_ADDRESS_KEY, String.valueOf(dataNodeIPCPort));
-        conf.set(DFS_DATANODE_HTTP_ADDRESS_KEY, String.valueOf(dataNodeHttpPort));
+        conf.set(DFS_DATANODE_IPC_ADDRESS_KEY, dataNodeIPCPort);
+        conf.set(DFS_DATANODE_HTTP_ADDRESS_KEY, dataNodeHttpPort);
         MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES);
         builder.nameNodePort(nameNodePort);
         builder.nameNodeHttpPort(nameNodeHttpPort);
+        builder.checkDataNodeAddrConfig(true);
+        builder.checkDataNodeHostConfig(true);
+        Thread.sleep(5000);
         cluster = builder.build();
         cluster.waitActive();
         fsn = cluster.getNamesystem();

@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e pipefail
+set -oe pipefail
 
 dependencies="hadoop-hdfs-project/hadoop-hdfs/target/dependency/*"
 
@@ -36,4 +36,6 @@ fi
 # echo $JQF_SID
 # $JQF_DIR/bin/jqf-afl-fuzz -c ${classpath} -i fuzz-seeds -m 32768 -v -t 6000 -S $JQF_SID org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.FuzzingTest fuzzCommand
 
-java -cp ${classpath} org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.MiniCluster
+echo "$1"
+
+java -cp ${classpath} org.apache.hadoop.hdfs.server.namenode.upgradefuzzing."$1"

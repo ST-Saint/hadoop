@@ -20,14 +20,14 @@ public class RandomSource {
         byte[] bytes = Arrays.copyOfRange(source, cursor, cursor + 4);
         cursor+=4;
         ByteBuffer wrapped = ByteBuffer.wrap(bytes);
-        return wrapped.getInt();
+        return wrapped.getInt() & 0x7fffffff;
     }
 
     public Integer nextInt(int bound){
         byte[] bytes = Arrays.copyOfRange(source, cursor, cursor + 4);
         cursor+=4;
         ByteBuffer wrapped = ByteBuffer.wrap(bytes);
-        return wrapped.getInt()%bound;
+        return (wrapped.getInt() & (0x7fffffff) )%bound;
     }
 
     public Boolean nextBoolean() {

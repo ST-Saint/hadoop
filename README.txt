@@ -35,6 +35,12 @@ jqf/bin/jqf-afl-fuzz
 -   build
 
 ```bash
+mvn -Pdist package -DskipTests
+```
+
+- compile
+
+```bash
 mvn compile test-compile
 ```
 

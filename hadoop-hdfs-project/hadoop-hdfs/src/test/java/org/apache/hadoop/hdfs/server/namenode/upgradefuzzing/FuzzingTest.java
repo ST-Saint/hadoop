@@ -84,11 +84,15 @@ public class FuzzingTest {
     public FuzzingTest() {
         conf = new Configuration();
         uuid = UUID.randomUUID();
-        conf.set("hadoop.tmp.dir", "/home/yayu/tmp/hdfs-" + uuid.toString());
-        conf.set("hadoop.home.dir", "/home/yayu/tmp/hdfs-" + uuid.toString());
-        conf.set("hadoop.log.dir", "/home/yayu/tmp/hdfs-" + uuid.toString() + "/logs");
-        conf.set("yarn.log.dir", "/home/yayu/tmp/hdfs-" + uuid.toString() + "/logs");
-        conf.set("fs.defaultFS", "hdfs://localhost:" + new Random().nextInt(1024) + 10000);
+        conf.set("hadoop.tmp.dir", "/home/yayu/tmp/minicluster-" + "0");
+        conf.set("hadoop.home.dir", "/home/yayu/tmp/minicluster-" + "0");
+        conf.set("hadoop.log.dir", "/home/yayu/tmp/minicluster-" + "0" + "/logs");
+        conf.set("yarn.log.dir", "/home/yayu/tmp/minicluster-" + "0" + "/logs");
+        conf.set("fs.defaultFS", "hdfs://localhost:10240");
+        conf.set("dfs.namenode.http-address", "127.0.0.1:10241");
+        conf.set("dfs.datanode.address", "127.0.0.1:10242");
+        conf.set("dfs.datanode.http.address", "127.0.0.1:10244");
+        conf.set("dfs.datanode.ipc.address", "127.0.0.1:10243");
         conf.set("dfs.replication", "1");
     }
 
@@ -151,21 +155,22 @@ public class FuzzingTest {
         // public void run() {
         // NoSystemExit.set();
         // try {
-        //     System.out.println(hdfsClusterConf.get("hadoop.tmp.dir"));
-        //     NameNode formatNamenode = NameNode.createNameNode(new String[] { "-format", "-force", "-nonInteractive" },
-        //             hdfsClusterConf);
+        // System.out.println(hdfsClusterConf.get("hadoop.tmp.dir"));
+        // NameNode formatNamenode = NameNode.createNameNode(new String[] { "-format",
+        // "-force", "-nonInteractive" },
+        // hdfsClusterConf);
         // } catch (ExitException e) {
-        //     // System.out.println(e.status);
-        //     // e.printStackTrace();
-        //     if (e.status != 0) {
-        //         NoSystemExit.down();
-        //         e.printStackTrace();
-        //         System.exit(e.status);
-        //     }
+        // // System.out.println(e.status);
+        // // e.printStackTrace();
+        // if (e.status != 0) {
+        // NoSystemExit.down();
+        // e.printStackTrace();
+        // System.exit(e.status);
+        // }
         // } catch (IOException e) {
-        //     e.printStackTrace();
+        // e.printStackTrace();
         // } finally {
-        //     NoSystemExit.down();
+        // NoSystemExit.down();
         // }
         // }
         // };
@@ -218,23 +223,26 @@ public class FuzzingTest {
     public void testCommand() throws Exception {
         FsShell shell = new FsShell();
         shell.setConf(conf);
-        FsShellGenerator fsg = new FsShellGenerator(null);
-        for (int i = 0; i < 1000; ++i) {
-            String[] cmd = fsg.generate();
+        File seedFile = new File("/home/yayu/Project/Upgrade-Fuzzing/hadoop-3.3.1/fuzz-seeds/seed");
+        InputStream is = new FileInputStream(seedFile);
+        FsShellGenerator fsg = new FsShellGenerator(is);
+        String[] cmd = null;
+        for (int i = 0; i < 1; ++i) {
+            cmd = fsg.generate();
             FileWriter fw = new FileWriter("upgradefuzz.log", true);
             fw.write(String.join(" ", cmd) + "\n");
             fw.close();
         }
-        byte[] b = new byte[32768];
-        new Random().nextBytes(b);
-        File seedFile = new File("/home/yayu/Project/Upgrade-Fuzzing/hadoop-3.3.1/fuzz-seeds/seed");
-        Files.write(seedFile.toPath(), b);
+        cmd = new String[] { "-get", "-crc", "/file4", "/home/yayu/tmp/localsrc/file3" };
         int res;
         try {
-            // res = ToolRunner.run(shell, cmd);
+            res = ToolRunner.run(shell, cmd);
         } finally {
             shell.close();
         }
+        byte[] b = new byte[32768];
+        new Random().nextBytes(b);
+        Files.write(seedFile.toPath(), b);
     }
 
     @Fuzz
@@ -252,5 +260,10 @@ public class FuzzingTest {
         } finally {
             shell.close();
         }
+    }
+
+    public static void main(String[] argv) throws Exception {
+        FuzzingTest test = new FuzzingTest();
+        test.testCommand();
     }
 }
