@@ -57,9 +57,7 @@ public class Commands {
         // usage,
         //
         // report,
-        safemode,
-        saveNamespace,
-        rollEdits,
+        safemode, saveNamespace, rollEdits,
         // restoreFailedStorage,
         // refreshNodes,
         // setQuota,
@@ -82,8 +80,7 @@ public class Commands {
         // setBalancerBandwidth,
         // getBalancerBandwidth,
         // fetchImage,
-        allowSnapshot,
-        disallowSnapshot,
+        allowSnapshot, disallowSnapshot,
         // shutdownDatanode,
         // evictWriters,
         // getDatanodeInfo,
@@ -103,7 +100,7 @@ public class Commands {
         }
 
         public Integer execute(Configuration conf) throws Exception {
-            String[] argv = commands.toArray(new String[0]);
+            String[] argv = generate();
             int res = ToolRunner.run(new DFSAdmin(conf), argv);
             return res;
         }
@@ -119,12 +116,9 @@ public class Commands {
         }
 
         public Integer execute(Configuration conf) throws Exception {
+            String[] argv = generate();
             FsShell shell = new FsShell();
             shell.setConf(conf);
-            String[] argv = commands.toArray(new String[0]);
-            FileWriter fw = new FileWriter("upgradefuzz.log", true);
-            fw.write(String.join(" ", cmd) + "\n");
-            fw.close();
             int res = ToolRunner.run(shell, argv);
             return res;
         }
@@ -172,6 +166,11 @@ public class Commands {
         public abstract Integer execute() throws Exception;
 
         public abstract Integer execute(Configuration conf) throws Exception;
+
+        @Override
+        public String toString() {
+            return String.join(" ", commands);
+        }
 
         public String generateHdfsPath() {
             if (rnd.nextBoolean()) {

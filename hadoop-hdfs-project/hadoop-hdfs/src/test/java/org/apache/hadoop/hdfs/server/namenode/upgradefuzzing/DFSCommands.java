@@ -183,4 +183,31 @@ public class DFSCommands {
         }
     }
 
+    public static class createSnapshotCommand extends DFSCommand {
+        createSnapshotCommand(RandomSource rand) {
+            super(rand);
+            cmd = "-createSnapshot";
+            options = new String[0];
+        }
+
+        @Override
+        public void generateInternal() {
+            add(generateHdfsPath());
+            add("snapshot" + rnd.nextInt(10));
+        }
+    }
+
+    public static class deleteSnapshotCommand extends DFSCommand {
+        deleteSnapshotCommand(RandomSource rand) {
+            super(rand);
+            cmd = "-deleteSnapshot";
+            options = new String[0];
+        }
+
+        @Override
+        public void generateInternal() {
+            add(generateHdfsPath());
+            add("snapshot" + rnd.nextInt(10));
+        }
+    }
 }

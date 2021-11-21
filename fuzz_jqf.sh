@@ -4,7 +4,6 @@ set -oe pipefail
 dependencies="hadoop-hdfs-project/hadoop-hdfs/target/dependency/*"
 
 classpath=${dependencies}\
-:hadoop-hdfs-project/hadoop-hdfs/src/test/java\
 :hadoop-hdfs-project/hadoop-hdfs/target\
 :hadoop-hdfs-project/hadoop-hdfs/target/classes\
 :hadoop-hdfs-project/hadoop-hdfs/target/test-classes\
@@ -16,8 +15,8 @@ classpath=${dependencies}\
 
 
 upgradefuzz_dir="hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/upgradefuzzing/"
-
-javac -cp "${classpath}" ${upgradefuzz_dir}/*.java
+classes_dir="hadoop-hdfs-project/hadoop-hdfs/target/test-classes"
+javac -cp "${classpath}" ${upgradefuzz_dir}/*.java -Xlint:deprecation -d ${classes_dir}
 
 if [[ -z "$AFL_DIR" ]]; then
     export AFL_DIR=$HOME/Project/Upgrade-Fuzzing/afl

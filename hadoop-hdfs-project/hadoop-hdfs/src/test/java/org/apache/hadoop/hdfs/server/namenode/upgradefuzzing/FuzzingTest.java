@@ -76,7 +76,7 @@ public class FuzzingTest {
     static final int BLOCKSIZE = 1024;
     static final long txid = 1;
     private final Path dir = new Path("/TestSnapshot");
-    private static String hadoopNewVPath = "/home/yayu/Project/Upgrade-Fuzzing/hadoop/branch-3.3.1";
+    private static String hadoopNewVPath = "/home/yayu/Project/Upgrade-Fuzzing/hadoop/branch-3.3.0";
     static MiniCluster minicluster;
 
     Configuration conf;
@@ -147,9 +147,13 @@ public class FuzzingTest {
         Command cmd;
         for (int i = 0; i < 20; ++i) {
             try {
+                System.out.println("generate");
                 cmd = fsg.generate();
                 int res = cmd.execute(conf);
-                assertEquals("exit code : " + Integer.toString(res), 0, res);
+                System.out.println(cmd.toString());
+                FileWriter fw = new FileWriter("upgradefuzz.log", true);
+                fw.write(cmd.toString() + " result: " + Integer.toString(res) + "\n");
+                fw.close();
                 Thread.sleep(50);
             } finally {
                 if (shell != null) {
@@ -159,18 +163,22 @@ public class FuzzingTest {
         }
 
         // Thread loadFSiamge = new Thread() {
-        //     @Override
-        //     public void run() {
-                Integer exitCode;
-                try {
-                    exitCode = systemExecute("./fuzz_minicluster_load.sh", new File(hadoopNewVPath));
-                    assertTrue(exitCode.toString(), exitCode.equals(0));
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                    assertTrue(false);
-                }
-        //     }
+        // @Override
+        // public void run() {
+        Integer exitCode;
+        try {
+            String timestamp = Long.toUnsignedString(System.currentTimeMillis());
+            systemExecute("cp -r minicluster-0 minicluster-" + timestamp, new File("/home/yayu/tmp/"));
+            exitCode = systemExecute("./fuzz_reload.sh -r -p /home/yayu/tmp/minicluster-" + timestamp,
+                    new File(hadoopNewVPath));
+            System.out.println("exit : " + Integer.toString(exitCode));
+            assertTrue(exitCode.toString(), exitCode.equals(0));
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            assertTrue(false);
+        }
+        // }
         // };
         // loadFSiamge.start();
     }
@@ -186,9 +194,12 @@ public class FuzzingTest {
             res = ToolRunner.run(conf, shell, new String[] { "-mkdir", "-p", "/user/yayu/" });
             res = ToolRunner.run(conf, new DFSAdmin(conf), new String[] { "-allowSnapshot", "/user/yayu" });
             res = ToolRunner.run(conf, shell, new String[] { "-createSnapshot", "/user/yayu/", "s0" });
-            // res = ToolRunner.run(conf, new DFSAdmin(conf), new String[] { "-safemode", "enter" });
-            // res = ToolRunner.run(conf, new DFSAdmin(conf), new String[] { "-saveNamespace" });
-            // res = ToolRunner.run(conf, new DFSAdmin(conf), new String[] { "-safemode", "leave" });
+            // res = ToolRunner.run(conf, new DFSAdmin(conf), new String[] { "-safemode",
+            // "enter" });
+            // res = ToolRunner.run(conf, new DFSAdmin(conf), new String[] {
+            // "-saveNamespace" });
+            // res = ToolRunner.run(conf, new DFSAdmin(conf), new String[] { "-safemode",
+            // "leave" });
         } finally {
             shell.close();
         }

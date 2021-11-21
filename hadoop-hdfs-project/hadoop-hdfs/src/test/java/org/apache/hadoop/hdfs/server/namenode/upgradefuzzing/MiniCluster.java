@@ -12,6 +12,7 @@ import java.util.Random;
 
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -60,7 +61,7 @@ public class MiniCluster {
         // shutDown();
     }
 
-    public void startAndShutdown() throws Exception{
+    public void startAndShutdown() throws Exception {
         conf = new Configuration();
         // conf.set("hadoop.tmp.dir", "/home/yayu/tmp/hdfs-" + "0");
         conf.set(HDFS_MINIDFS_BASEDIR, "/home/yayu/tmp/minicluster-0");
@@ -78,13 +79,9 @@ public class MiniCluster {
         shutDown();
     }
 
-    public void startRollingUpgrade(String basePath){
+    public void startRollingUpgrade(String basePath) {
         conf = new Configuration();
-        if( basePath==null ){
-            conf.set(HDFS_MINIDFS_BASEDIR, "/home/yayu/tmp/minicluster-0");
-        }else{
-            conf.set(HDFS_MINIDFS_BASEDIR, basePath);
-        }
+        conf.set(HDFS_MINIDFS_BASEDIR, basePath);
 
         MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES);
         builder = builder.format(false);
@@ -92,45 +89,50 @@ public class MiniCluster {
         operation.setRollingUpgradeStartupOption("started");
         builder = builder.startupOption(operation);
         try {
-          cluster = builder.build();
-          cluster.waitActive();
-          // System.exit(0);
+            cluster = builder.build();
+            cluster.waitActive();
+            System.exit(0);
         } catch (IOException e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            System.exit(1);
         }
         shutDown();
     }
 
-    public void shutDown(){
-        if( cluster!=null ){
+    public void shutDown() {
+        if (cluster != null) {
             cluster.shutdown();
-            cluster=null;
+            cluster = null;
         }
     }
 
-    public void start(String[] argv) throws Exception{
+    public void start(String[] argv) throws Exception {
         options = new Options();
         options.addOption("h", "help", false, "print this message");
         options.addOption("a", "alive", false, "keep alive");
         options.addOption("r", "rollingupgrade", false, "Try load fsimage in old foramt");
         options.addOption("t", "test", false, "send fsshell command and test");
+        options.addOption("p", "basePath", true, "hadoop base directory");
         cmdLine = new BasicParser().parse(options, argv);
-        if( cmdLine.hasOption("test")  ){
+        if (cmdLine.hasOption("help")) {
+            HelpFormatter formatter = new HelpFormatter();
+            formatter.printHelp("FuzzingMiniCluster", options);
+            return;
+        }
+        if (cmdLine.hasOption("test")) {
             FuzzingTest fz = new FuzzingTest();
             FuzzingTest.pretest();
-            byte[] b = new byte[1024*32];
+            byte[] b = new byte[1024 * 32];
             new Random(System.currentTimeMillis()).nextBytes(b);
             fz.fuzzCommand(new ByteArrayInputStream(b));
             Thread.sleep(2000);
             fz.tearDown();
-        }
-        else if(cmdLine.hasOption("alive")){
+        } else if (cmdLine.hasOption("alive")) {
             startCluster();
-        }else if( cmdLine.hasOption("rollingupgrade") ){
-            startRollingUpgrade(null);
-        }
-        else{
+        } else if (cmdLine.hasOption("rollingupgrade")) {
+            startRollingUpgrade(cmdLine.getOptionValue("basePath", "/home/yayu/tmp/minicluster-0"));
+        } else {
             startAndShutdown();
         }
     }
