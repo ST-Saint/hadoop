@@ -101,7 +101,12 @@ public class Commands {
 
         public Integer execute(Configuration conf) throws Exception {
             String[] argv = generate();
+            FileWriter fw = new FileWriter("upgradefuzz.log", true);
+            fw.write(this.toString() + " result: " );
+            fw.flush();
             int res = ToolRunner.run(new DFSAdmin(conf), argv);
+            fw.write(Integer.toString(res) + "\n");
+            fw.close();
             return res;
         }
     }
@@ -117,9 +122,14 @@ public class Commands {
 
         public Integer execute(Configuration conf) throws Exception {
             String[] argv = generate();
+            FileWriter fw = new FileWriter("upgradefuzz.log", true);
+            fw.write(this.toString() + " result: " );
+            fw.flush();
             FsShell shell = new FsShell();
             shell.setConf(conf);
             int res = ToolRunner.run(shell, argv);
+            fw.write(Integer.toString(res) + "\n");
+            fw.close();
             return res;
         }
     }
@@ -130,6 +140,7 @@ public class Commands {
         String cmd;
         String[] options;
         Integer suffixBound = 10;
+        Integer directoryMaxDepth = 3;
         String localPrefix = "/home/yayu/tmp/localsrc/";
         int localFileLengthLimit = 1024;
 
@@ -187,7 +198,8 @@ public class Commands {
 
         public String generateHdfsDir() {
             String dirPath = "/";
-            while (rnd.nextBoolean()) {
+            int depth = 0;
+            while (rnd.nextBoolean() && ++depth < directoryMaxDepth) {
                 dirPath += "dir" + Integer.toString(rnd.nextInt(suffixBound)) + "/";
             }
             return dirPath;
@@ -222,7 +234,8 @@ public class Commands {
 
         public String generateLocalDir() {
             String dirPath = localPrefix;
-            while (rnd.nextBoolean()) {
+            int depth = 0;
+            while (rnd.nextBoolean() && ++depth < directoryMaxDepth) {
                 dirPath += "dir" + Integer.toString(rnd.nextInt(suffixBound)) + "/";
             }
             File dirFile = new File(dirPath);

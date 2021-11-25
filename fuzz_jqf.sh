@@ -33,4 +33,4 @@ fi
 
 JQF_SID=$(( ( RANDOM % 1000 )  + 1 ))
 echo $JQF_SID
-$JQF_DIR/bin/jqf-afl-fuzz -c ${classpath} -i fuzz-seeds -m 32768 -v -t 60000 -S $JQF_SID org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.FuzzingTest fuzzCommand
+$JQF_DIR/bin/jqf-afl-fuzz -c ${classpath} -i fuzz-seeds -m 32768 -v -S $JQF_SID org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.FuzzingTest fuzzCommand

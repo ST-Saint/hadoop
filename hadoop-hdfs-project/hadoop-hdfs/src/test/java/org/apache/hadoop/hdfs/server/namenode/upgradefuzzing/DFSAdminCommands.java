@@ -20,17 +20,22 @@ public class DFSAdminCommands {
         }
     }
 
-
     public static class safemodeCommand extends DFSAdminCommand {
         safemodeCommand(RandomSource rand) {
             super(rand);
             cmd = "-safemode";
-            options = new String[] { "enter", "leave", "get", "wait", "forceExit" };
+            options = new String[] { "enter", "leave", "get", /*"wait",*/ "forceExit" };
+        }
+
+        @Override
+        public void generateFlags() {
+            int idx = rnd.nextInt(options.length);
+            commands.add(options[idx]);
         }
     }
 
     public static class allowSnapshotCommand extends DFSAdminCommand {
-        allowSnapshotCommand(RandomSource rand){
+        allowSnapshotCommand(RandomSource rand) {
             super(rand);
             cmd = "-allowSnapshot";
             options = new String[0];
@@ -43,7 +48,7 @@ public class DFSAdminCommands {
     }
 
     public static class disallowSnapshotCommand extends DFSAdminCommand {
-        disallowSnapshotCommand(RandomSource rand){
+        disallowSnapshotCommand(RandomSource rand) {
             super(rand);
             cmd = "-disallowSnapshot";
             options = new String[0];
@@ -54,5 +59,4 @@ public class DFSAdminCommands {
             add(generateHdfsDir());
         }
     }
-
 }

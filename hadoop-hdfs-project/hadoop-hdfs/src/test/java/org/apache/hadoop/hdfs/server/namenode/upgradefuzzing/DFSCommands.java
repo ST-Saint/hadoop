@@ -161,7 +161,7 @@ public class DFSCommands {
         rmCommand(RandomSource rand) {
             super(rand);
             cmd = "-rm";
-            options = new String[] { "-f", "-r", "-R", "-skipTrash", "-safely" };
+            options = new String[] { "-f", "-r", "-R", "-skipTrash" /* , "-safely" */ };
         }
 
         @Override
