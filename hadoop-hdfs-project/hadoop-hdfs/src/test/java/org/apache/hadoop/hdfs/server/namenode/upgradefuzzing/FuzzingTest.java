@@ -129,8 +129,10 @@ public class FuzzingTest {
     }
 
     // @After
-    public void tearDown() throws Exception {
-        minicluster.shutDown();
+    public static void tearDown() throws Exception {
+        if (minicluster != null) {
+            minicluster.shutDown();
+        }
     }
 
     @Test
@@ -139,10 +141,14 @@ public class FuzzingTest {
         tearDown();
     }
 
+    public static String commandLog = "";
+    public static Integer commandIndex = 0;
+
     @Fuzz
     public void fuzzCommand(InputStream input) throws Exception {
         FsShell shell = null;
         CommandGenerator fsg = new CommandGenerator(input);
+        // commandLog = "";
         // ExecutorService executor = Executors.newSingleThreadExecutor();
         for (int i = 0; i < 20; ++i) {
             try {
@@ -153,6 +159,8 @@ public class FuzzingTest {
                             Command cmd;
                             cmd = fsg.generate();
                             int res = cmd.execute(conf);
+                            String cmdString = cmd.toString();
+                            commandLog += "CMD: " + Integer.toString(++commandIndex) + ": " + cmdString + "\nresult: " + Integer.toString(res) + "\n";
                         } catch (Exception e) {
                             // TODO Auto-generated catch block
                             e.printStackTrace();
@@ -172,6 +180,11 @@ public class FuzzingTest {
         }
 
         String timestamp = Long.toUnsignedString(System.currentTimeMillis());
+        File logFile = new File("fuzz-results/logs/upgradefuzz-" + timestamp + ".log");
+        logFile.getParentFile().mkdirs();
+        FileWriter fw = new FileWriter(logFile, true);
+        fw.write(commandLog);
+        fw.close();
         systemExecute("cp -r minicluster-0 minicluster-" + timestamp, new File("/home/yayu/tmp/"));
     }
 
@@ -240,23 +253,23 @@ public class FuzzingTest {
     }
 
     public static Integer systemExecute(String cmd, File path) throws IOException {
-        FileWriter fw = new FileWriter("upgradefuzz.log", true);
-        fw.write("exec: " + cmd + "\n");
-        fw.write(path.toString() + "\n");
-        fw.flush();
+        // FileWriter fw = new FileWriter("upgradefuzz.log", true);
+        // fw.write("exec: " + cmd + "\n");
+        // fw.write(path.toString() + "\n");
+        // fw.flush();
         Process process = Runtime.getRuntime().exec(cmd, null, path);
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
         String result = "", string;
         while ((string = reader.readLine()) != null) {
-            fw.write(string + "\n");
-            fw.flush();
+            // fw.write(string + "\n");
+            // fw.flush();
             result += string + "\n";
         }
         try {
             process.waitFor();
         } catch (InterruptedException e) {
         }
-        fw.close();
+        // fw.close();
         reader.close();
         return process.exitValue();
     }

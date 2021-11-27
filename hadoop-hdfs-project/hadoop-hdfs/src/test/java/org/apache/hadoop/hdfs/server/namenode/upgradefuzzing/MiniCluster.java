@@ -166,23 +166,23 @@ public class MiniCluster {
     }
 
     public static Integer systemExecute(String cmd, File path) throws IOException {
-        FileWriter fw = new FileWriter("upgradefuzz.log", true);
-        fw.write("exec: " + cmd + "\n");
-        fw.write(path.toString() + "\n");
-        fw.flush();
+        // FileWriter fw = new FileWriter("upgradefuzz.log", true);
+        // fw.write("exec: " + cmd + "\n");
+        // fw.write(path.toString() + "\n");
+        // fw.flush();
         Process process = Runtime.getRuntime().exec(cmd, null, path);
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
         String result = "", string;
         while ((string = reader.readLine()) != null) {
-            fw.write(string + "\n");
-            fw.flush();
-            result += string + "\n";
+            // fw.write(string + "\n");
+            // fw.flush();
+            // result += string + "\n";
         }
         try {
             process.waitFor();
         } catch (InterruptedException e) {
         }
-        fw.close();
+        // fw.close();
         reader.close();
         return process.exitValue();
     }

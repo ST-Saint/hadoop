@@ -26,8 +26,8 @@ public class Commands {
         copyFromLocal, copyToLocal,
         // count,
         cp,
-        // createSnapshot,
-        // deleteSnapshot,
+        createSnapshot,
+        deleteSnapshot,
         // df,
         // du,
         // expunge,
@@ -101,12 +101,12 @@ public class Commands {
 
         public Integer execute(Configuration conf) throws Exception {
             String[] argv = generate();
-            FileWriter fw = new FileWriter("upgradefuzz.log", true);
-            fw.write(this.toString() + " result: " );
-            fw.flush();
+            // FileWriter fw = new FileWriter("upgradefuzz.log", true);
+            // fw.write(this.toString() + " result: " );
+            // fw.flush();
             int res = ToolRunner.run(new DFSAdmin(conf), argv);
-            fw.write(Integer.toString(res) + "\n");
-            fw.close();
+            // fw.write(Integer.toString(res) + "\n");
+            // fw.close();
             return res;
         }
     }
@@ -122,14 +122,14 @@ public class Commands {
 
         public Integer execute(Configuration conf) throws Exception {
             String[] argv = generate();
-            FileWriter fw = new FileWriter("upgradefuzz.log", true);
-            fw.write(this.toString() + " result: " );
-            fw.flush();
+            // FileWriter fw = new FileWriter("upgradefuzz.log", true);
+            // fw.write(this.toString() + " result: " );
+            // fw.flush();
             FsShell shell = new FsShell();
             shell.setConf(conf);
             int res = ToolRunner.run(shell, argv);
-            fw.write(Integer.toString(res) + "\n");
-            fw.close();
+            // fw.write(Integer.toString(res) + "\n");
+            // fw.close();
             return res;
         }
     }

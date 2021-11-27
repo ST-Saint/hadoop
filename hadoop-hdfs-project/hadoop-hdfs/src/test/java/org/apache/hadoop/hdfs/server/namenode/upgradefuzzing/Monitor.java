@@ -27,9 +27,8 @@ public class Monitor {
                 Integer exitCode = 0;
                 Boolean ok = false;
                 try {
-                    backupDFS(dir);
-                    exitCode = systemExecute("timeout " + Integer.toString(loadTimeout) + " ./fuzz_reload.sh " + dir,
-                            new File(hadoopNewVPath));
+                    exitCode = systemExecute("timeout " + Integer.toString(loadTimeout) + " ./fuzz_reload.sh " + dir
+                            + " > " + dir + "/log.txt 2>&1", new File(hadoopNewVPath));
                     if (exitCode == 0) {
                         ok = true;
                     } else {
@@ -46,21 +45,25 @@ public class Monitor {
                         // TODO Auto-generated catch block
                         e.printStackTrace();
                     }
+                } else {
+                    backupDFS(dir);
+                }
+                synchronized (count) {
+                    count += 1;
+                    if (count % 10 == 0) {
+                        System.out.println("load " + count + " in total");
+                    }
                 }
             }
 
             void backupDFS(String dir) {
                 try {
-                    systemExecute("cp -r " + dir + " " + failureDir, workDir);
+                    systemExecute("mv " + dir + " " + failureDir, workDir);
                 } catch (IOException e) {
                     System.out.println("Failed in renaming " + dir);
                 }
             }
         };
-        count += 1;
-        if (count % 1 == 0) {
-            System.out.println("load " + count + " in total");
-        }
         pool.submit(loadThread);
     }
 
@@ -70,9 +73,10 @@ public class Monitor {
         if (!failureDir.exists()) {
             failureDir.mkdirs();
         }
+        Boolean empty = false;
+        Boolean findAny = false;
         while (true) {
             File[] files = workDir.listFiles();
-            Boolean findAny = false;
             for (File f : files) {
                 if (f.isDirectory() && f.getName().startsWith("minicluster-")) {
                     String[] fn = f.toString().split("-");
@@ -80,7 +84,8 @@ public class Monitor {
                     long sufixTime = Long.parseLong(sufix);
                     if (timestamp < sufixTime) {
                         findAny = true;
-                        System.out.println("current time: " + timestamp + "\n" + "sufix time: " + sufixTime);
+                        // System.out.println("current time: " + timestamp + "\n" + "sufix time: " +
+                        // sufixTime);
                         loadFSImage(f.toString());
                     }
                 }
@@ -94,10 +99,15 @@ public class Monitor {
                 }
             }
             if (findAny == false) {
-                System.out.println("empty");
-                Thread.sleep(5000);
+                if (!empty) {
+                    System.out.println("empty");
+                    empty = true;
+                }
+                Thread.sleep(10000);
             } else {
-                Thread.sleep(1000);
+                findAny = false;
+                empty = false;
+                Thread.sleep(5000);
             }
         }
     }
@@ -107,7 +117,7 @@ public class Monitor {
         // fw.write("exec: " + cmd + "\n");
         // fw.write(path.toString() + "\n");
         // fw.close();
-        Process process = Runtime.getRuntime().exec(cmd, null, path);
+        Process process = Runtime.getRuntime().exec(new String[] { "/bin/sh", "-c", cmd }, null, path);
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
         String result = "", string;
         while ((string = reader.readLine()) != null) {
@@ -121,6 +131,7 @@ public class Monitor {
         }
         // fw.close();
         reader.close();
+        // System.out.println("exec: " + cmd + " result: " + process.exitValue());
         return process.exitValue();
     }
 }
