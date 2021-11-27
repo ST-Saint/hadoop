@@ -2,12 +2,12 @@ package org.apache.hadoop.hdfs.server.namenode.upgradefuzzing;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -15,6 +15,11 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.util.ToolRunner;
 
 public class Commands {
+
+    static Integer directoryMaxDepth = 3;
+    static Integer suffixBound = 10;
+    static String localPrefix = FuzzingTest.localResource;
+    static int localFileLengthLimit = 1024;
 
     public enum CommandsEnum {
         appendToFile,
@@ -25,9 +30,7 @@ public class Commands {
         // chown,
         copyFromLocal, copyToLocal,
         // count,
-        cp,
-        createSnapshot,
-        deleteSnapshot,
+        cp, createSnapshot, deleteSnapshot,
         // df,
         // du,
         // expunge,
@@ -139,10 +142,6 @@ public class Commands {
         List<String> commands = new ArrayList<>();
         String cmd;
         String[] options;
-        Integer suffixBound = 10;
-        Integer directoryMaxDepth = 3;
-        String localPrefix = "/home/yayu/tmp/localsrc/";
-        int localFileLengthLimit = 1024;
 
         public Command(RandomSource rand) {
             rnd = rand;
@@ -215,6 +214,75 @@ public class Commands {
 
         public String generateLocalFile() {
             String filePath = generateLocalDir() + "file" + Integer.toString(rnd.nextInt(suffixBound));
+            // try {
+            // File file = new File(filePath);
+            // file.getParentFile().mkdirs();
+            // file.createNewFile();
+            // Integer fileLength = rnd.nextInt(localFileLengthLimit);
+            // byte[] content = new byte[fileLength];
+            // new Random().nextBytes(content);
+            // FileOutputStream fos = new FileOutputStream(filePath);
+            // fos.write(content);
+            // fos.close();
+            // } catch (IOException e) {
+            // // TODO Auto-generated catch block
+            // e.printStackTrace();
+            // }
+            return filePath;
+        }
+
+        public String generateLocalDir() {
+            String dirPath = localPrefix;
+            int depth = 0;
+            while (rnd.nextBoolean() && ++depth < directoryMaxDepth) {
+                dirPath += "dir" + Integer.toString(rnd.nextInt(suffixBound)) + "/";
+            }
+            // File dirFile = new File(dirPath);
+            // if (!dirFile.exists()) {
+            // dirFile.mkdirs();
+            // }
+            return dirPath;
+        }
+
+        public void createLocalFile(String filePath) {
+            try {
+                File file = new File(filePath);
+                file.getParentFile().mkdirs();
+                file.createNewFile();
+                // Integer fileLength = rnd.nextInt(localFileLengthLimit);
+                // byte[] content = new byte[fileLength];
+                // new Random().nextBytes(content);
+                byte[] content = rnd.nextBytes(localFileLengthLimit);
+                FileOutputStream fos = new FileOutputStream(filePath);
+                fos.write(content);
+                fos.close();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+
+    }
+
+    public static class PrepareLocalSource {
+        static String localPrefix = FuzzingTest.localResource;
+        static Random rnd = new Random();
+
+        public static String generateLocalFile() {
+            String filePath = generateLocalDir() + "file" + Integer.toString(rnd.nextInt(suffixBound));
+            return filePath;
+        }
+
+        public static String generateLocalDir() {
+            String dirPath = localPrefix;
+            int depth = 0;
+            while (rnd.nextBoolean() && ++depth < directoryMaxDepth) {
+                dirPath += "dir" + Integer.toString(rnd.nextInt(suffixBound)) + "/";
+            }
+            return dirPath;
+        }
+
+        public static void createLocalFile(String filePath) {
             try {
                 File file = new File(filePath);
                 file.getParentFile().mkdirs();
@@ -229,20 +297,23 @@ public class Commands {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
-            return filePath;
         }
 
-        public String generateLocalDir() {
-            String dirPath = localPrefix;
-            int depth = 0;
-            while (rnd.nextBoolean() && ++depth < directoryMaxDepth) {
-                dirPath += "dir" + Integer.toString(rnd.nextInt(suffixBound)) + "/";
+        public static void generateLocalSnapshot() throws IOException {
+            File localSnapshotDir = new File(localPrefix);
+            File localSnapshotCopyDir = new File(FuzzingTest.localResourceCopy);
+            if (localSnapshotDir.exists()) {
+                FileUtils.deleteDirectory(localSnapshotDir);
             }
-            File dirFile = new File(dirPath);
-            if (!dirFile.exists()) {
-                dirFile.mkdirs();
+            if (localSnapshotCopyDir.exists()) {
+                FileUtils.deleteDirectory(localSnapshotCopyDir);
             }
-            return dirPath;
+            localSnapshotDir.mkdirs();
+            for (int i = 0; i < 256; ++i) {
+                String filePath = generateLocalFile();
+                createLocalFile(filePath);
+            }
+            FileUtils.copyDirectory(localSnapshotDir, localSnapshotCopyDir);
         }
 
     }

@@ -1,57 +1,32 @@
 package org.apache.hadoop.hdfs.server.namenode.upgradefuzzing;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import edu.berkeley.cs.jqf.fuzz.Fuzz;
-import edu.berkeley.cs.jqf.fuzz.JQF;
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 import java.util.UUID;
+
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
-import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.CommandGenerator;
 import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.Commands.Command;
-import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.NoSystemExit.ExitException;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.Commands.PrepareLocalSource;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
-import org.apache.hadoop.hdfs.util.Canceler;
-import org.apache.hadoop.metrics2.MetricsException;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.slf4j.event.Level;
+
+import edu.berkeley.cs.jqf.fuzz.Fuzz;
+import edu.berkeley.cs.jqf.fuzz.JQF;
 
 @RunWith(JQF.class)
 public class FuzzingTest {
@@ -77,12 +52,17 @@ public class FuzzingTest {
     static final long txid = 1;
     private final Path dir = new Path("/TestSnapshot");
     static MiniCluster minicluster;
+    static String localResource = "/home/yayu/tmp/localsrc/";
+    static String localResourceCopy = "/home/yayu/tmp/localsrc.cpy/";
+    static String localResourceRepro = "/home/yayu/tmp/localsrc[%s-%s]/";
 
     Configuration conf;
     MiniDFSCluster cluster;
     FSNamesystem fsn;
     DistributedFileSystem hdfs;
     UUID uuid;
+    private static String curTimestamp;
+    private static String preTimestamp;
 
     public FuzzingTest() {
         conf = new Configuration();
@@ -120,18 +100,22 @@ public class FuzzingTest {
     public static void pretest() throws Exception {
         minicluster = new MiniCluster();
         minicluster.startCluster();
+        PrepareLocalSource.generateLocalSnapshot();
     }
 
     // @Before
     public void setUp() throws Exception {
         minicluster = new MiniCluster();
         minicluster.startCluster();
+        preTimestamp = null;
     }
 
     // @After
     public static void tearDown() throws Exception {
         if (minicluster != null) {
             minicluster.shutDown();
+            FileUtils.moveDirectory(new File(localResourceCopy),
+                    new File(String.format(localResourceRepro, preTimestamp, curTimestamp)));
         }
     }
 
@@ -146,6 +130,11 @@ public class FuzzingTest {
 
     @Fuzz
     public void fuzzCommand(InputStream input) throws Exception {
+        curTimestamp = Long.toUnsignedString(System.currentTimeMillis());
+        System.out.println("get preTime stamp: " + preTimestamp + " + " + curTimestamp);
+        if (preTimestamp == null) {
+            preTimestamp = curTimestamp;
+        }
         FsShell shell = null;
         CommandGenerator fsg = new CommandGenerator(input);
         // commandLog = "";
@@ -160,7 +149,8 @@ public class FuzzingTest {
                             cmd = fsg.generate();
                             int res = cmd.execute(conf);
                             String cmdString = cmd.toString();
-                            commandLog += "CMD: " + Integer.toString(++commandIndex) + ": " + cmdString + "\nresult: " + Integer.toString(res) + "\n";
+                            commandLog += "CMD: " + Integer.toString(++commandIndex) + ": " + cmdString + "\nresult: "
+                                    + Integer.toString(res) + "\n";
                         } catch (Exception e) {
                             // TODO Auto-generated catch block
                             e.printStackTrace();
@@ -178,14 +168,15 @@ public class FuzzingTest {
                 }
             }
         }
-
-        String timestamp = Long.toUnsignedString(System.currentTimeMillis());
-        File logFile = new File("fuzz-results/logs/upgradefuzz-" + timestamp + ".log");
+        System.out.println("cursor usage: " + fsg.rnd.cursor);
+        File logFile = new File("fuzz-results/logs/upgradefuzz-" + curTimestamp + ".log");
         logFile.getParentFile().mkdirs();
         FileWriter fw = new FileWriter(logFile, true);
         fw.write(commandLog);
         fw.close();
-        systemExecute("cp -r minicluster-0 minicluster-" + timestamp, new File("/home/yayu/tmp/"));
+        File dfsFile = new File("/home/yayu/tmp/minicluster-0");
+        File dfsCopyFile = new File("/home/yayu/tmp/minicluster-" + curTimestamp);
+        FileUtils.copyDirectory(dfsFile, dfsCopyFile);
     }
 
     @Test
@@ -250,28 +241,6 @@ public class FuzzingTest {
         // byte[] b = new byte[32768];
         // new Random().nextBytes(b);
         // Files.write(seedFile.toPath(), b);
-    }
-
-    public static Integer systemExecute(String cmd, File path) throws IOException {
-        // FileWriter fw = new FileWriter("upgradefuzz.log", true);
-        // fw.write("exec: " + cmd + "\n");
-        // fw.write(path.toString() + "\n");
-        // fw.flush();
-        Process process = Runtime.getRuntime().exec(cmd, null, path);
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        String result = "", string;
-        while ((string = reader.readLine()) != null) {
-            // fw.write(string + "\n");
-            // fw.flush();
-            result += string + "\n";
-        }
-        try {
-            process.waitFor();
-        } catch (InterruptedException e) {
-        }
-        // fw.close();
-        reader.close();
-        return process.exitValue();
     }
 
     public static void main(String[] argv) throws Exception {

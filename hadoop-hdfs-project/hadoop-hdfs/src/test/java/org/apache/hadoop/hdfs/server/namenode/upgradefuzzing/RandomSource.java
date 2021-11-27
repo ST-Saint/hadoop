@@ -60,4 +60,19 @@ public class RandomSource {
         int bool = (source[cursor++] & 0xFF);
         return bool % 2 == 0;
     }
+
+    public byte[] nextBytes() {
+        Integer length = nextInt();
+        return nextBytes(length);
+    }
+
+    public byte[] nextBytes(Integer length) {
+        while (cursor + length > source.length) {
+            source = repeat(source);
+        }
+        byte[] res = Arrays.copyOfRange(source, cursor, cursor + length);
+        cursor += length;
+        return res;
+    }
+
 }
