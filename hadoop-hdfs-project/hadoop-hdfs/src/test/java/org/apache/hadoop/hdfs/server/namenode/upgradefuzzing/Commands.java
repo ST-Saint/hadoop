@@ -194,7 +194,7 @@ public class Commands {
         }
 
         public String generateHdfsDir() {
-            String dirPath = "/workdir";
+            String dirPath = "/workdir/";
             int depth = 0;
             while (rnd.nextBoolean() && ++depth < directoryMaxDepth) {
                 dirPath += "dir" + Integer.toString(rnd.nextInt(suffixBound)) + "/";

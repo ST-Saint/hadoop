@@ -1,21 +1,29 @@
 package org.apache.hadoop.hdfs.server.namenode.upgradefuzzing;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
 
 import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.Commands.Command;
-import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.Commands.DFSCommand;
 import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.Commands.CommandsEnum;
-import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSCommands.*;
-import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSAdminCommands.*;
-import org.apache.hadoop.hdfs.tools.DFSAdmin;
-import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSAdminCommands.allowSnapshotCommand;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSAdminCommands.disallowSnapshotCommand;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSAdminCommands.rollEditsCommand;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSAdminCommands.safemodeCommand;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSAdminCommands.saveNamespaceCommand;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSCommands.appendToFileCommand;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSCommands.copyFromLocalCommand;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSCommands.copyToLocalCommand;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSCommands.cpCommand;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSCommands.createSnapshotCommand;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSCommands.deleteSnapshotCommand;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSCommands.getCommand;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSCommands.getmergeCommand;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSCommands.mkdirCommand;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSCommands.moveFromLocalCommand;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSCommands.mvCommand;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSCommands.putCommand;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSCommands.rmCommand;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSCommands.rmdirCommand;
 
 public class CommandGenerator {
     RandomSource rnd;

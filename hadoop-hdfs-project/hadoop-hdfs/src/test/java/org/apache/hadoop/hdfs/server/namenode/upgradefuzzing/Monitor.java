@@ -15,12 +15,12 @@ public class Monitor {
     static long timestamp;
     static int loadTimeout = 20;
     private static String hadoopNewVPath = "/home/yayu/Project/Upgrade-Fuzzing/hadoop/branch-3.3.0";
-    static File workDir = new File("/home/yayu/tmp/");
+    static File workDir = new File("/home/yayu/tmp/minicluster");
     static File failureDir = new File("/home/yayu/tmp/failure/");
     static Integer count = 0;
     static ForkJoinPool pool = new ForkJoinPool(12);
 
-    public static void loadFSImage(String dir) {
+    public static void loadFSImage(File dir) {
         Thread loadThread = new Thread() {
             @Override
             public void run() {
@@ -40,7 +40,7 @@ public class Monitor {
                 }
                 if (ok) {
                     try {
-                        FileUtils.deleteDirectory(new File(dir));
+                        FileUtils.deleteDirectory(dir);
                     } catch (IOException e) {
                         // TODO Auto-generated catch block
                         e.printStackTrace();
@@ -56,9 +56,10 @@ public class Monitor {
                 }
             }
 
-            void backupDFS(String dir) {
+            void backupDFS(File dir) {
                 try {
-                    systemExecute("mv " + dir + " " + failureDir, workDir);
+                    System.out.println("target dir: " + new File(failureDir, dir.getName()));
+                    FileUtils.moveDirectory(dir, new File(failureDir, dir.getName()));
                 } catch (IOException e) {
                     System.out.println("Failed in renaming " + dir);
                 }
@@ -86,7 +87,7 @@ public class Monitor {
                         findAny = true;
                         // System.out.println("current time: " + timestamp + "\n" + "sufix time: " +
                         // sufixTime);
-                        loadFSImage(f.toString());
+                        loadFSImage(f);
                     }
                 }
             }
@@ -99,10 +100,8 @@ public class Monitor {
                 }
             }
             if (findAny == false) {
-                if (!empty) {
-                    System.out.println("empty");
-                    empty = true;
-                }
+                System.out.println("empty");
+                empty = true;
                 Thread.sleep(10000);
             } else {
                 findAny = false;
