@@ -9,6 +9,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -16,16 +17,17 @@ import java.lang.management.ManagementFactory;
 import java.util.Random;
 import java.util.UUID;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-
 
 public class MiniCluster {
     Configuration conf;
@@ -48,10 +50,15 @@ public class MiniCluster {
 
     public static final String HDFS_MINIDFS_BASEDIR = "hdfs.minidfs.basedir";
 
+    public static final String miniclusterRoot = "/home/yayu/tmp/minicluster/minicluster-0";
+    public static final int directoryMaxDepth = 3;
+    public static final int suffixBound = 10;
+    public static final int localFileLengthLimit = 1024;
+
     public void startCluster() throws IOException, InterruptedException {
         conf = new Configuration();
         // conf.set("hadoop.tmp.dir", "/home/yayu/tmp/hdfs-" + "0");
-        conf.set(HDFS_MINIDFS_BASEDIR, "/home/yayu/tmp/minicluster-0");
+        conf.set(HDFS_MINIDFS_BASEDIR, miniclusterRoot);
         conf.set(DFS_DATANODE_ADDRESS_KEY, String.valueOf(dataNodePort));
         conf.set(DFS_DATANODE_IPC_ADDRESS_KEY, dataNodeIPCPort);
         conf.set(DFS_DATANODE_HTTP_ADDRESS_KEY, dataNodeHttpPort);
@@ -73,7 +80,7 @@ public class MiniCluster {
     public void startAndShutdown() throws Exception {
         conf = new Configuration();
         // conf.set("hadoop.tmp.dir", "/home/yayu/tmp/hdfs-" + "0");
-        conf.set(HDFS_MINIDFS_BASEDIR, "/home/yayu/tmp/minicluster-0");
+        conf.set(HDFS_MINIDFS_BASEDIR, miniclusterRoot);
         conf.set(DFS_DATANODE_ADDRESS_KEY, String.valueOf(dataNodePort));
         conf.set(DFS_DATANODE_IPC_ADDRESS_KEY, dataNodeIPCPort);
         conf.set(DFS_DATANODE_HTTP_ADDRESS_KEY, dataNodeHttpPort);
@@ -86,9 +93,10 @@ public class MiniCluster {
         builder.checkDataNodeHostConfig(true);
         cluster = builder.build();
         cluster.waitActive();
+        fsn = cluster.getNamesystem();
+        hdfs = cluster.getFileSystem();
         shutDown();
     }
-
 
     public void startRollingUpgrade(String basePath) throws Exception {
         Configuration conf = new Configuration();
@@ -107,8 +115,10 @@ public class MiniCluster {
         cluster.waitActive();
         assertEquals(1, cluster.getNumNameNodes());
         assertEquals(1, cluster.getDataNodes().size());
+        fsn = cluster.getNamesystem();
+        hdfs = cluster.getFileSystem();
         System.exit(0);
-        // shutDown();
+        shutDown();
     }
 
     public void shutDown() {
@@ -143,19 +153,15 @@ public class MiniCluster {
         } else if (cmdLine.hasOption("alive")) {
             startCluster();
         } else if (cmdLine.hasOption("rollingupgrade")) {
-            String targetDir = cmdLine.getOptionValue("basePath", "/home/yayu/tmp/minicluster-0");
+            String targetDir = cmdLine.getOptionValue("basePath", "/home/yayu/tmp/minicluster/minicluster-0");
             if (cmdLine.hasOption("copy")) {
                 UUID uuid = UUID.randomUUID();
                 File copyFile = new File("/home/yayu/tmp/copy/" + "minicluster-" + uuid.toString());
-                if (!copyFile.exists()) {
+                if (!copyFile.getParentFile().exists()) {
                     copyFile.getParentFile().mkdirs();
                 }
                 System.out.println("target: " + targetDir + "\ncopy: " + copyFile.toString());
-                int res = systemExecute("cp -r " + targetDir + " " + copyFile.toString(), new File("/home/yayu/tmp/failure"));
-                if (res != 0) {
-                    System.out.println("failed to copy fsimage");
-                    System.exit(1);
-                }
+                FileUtils.copyDirectory(new File(targetDir), copyFile);
                 startRollingUpgrade(copyFile.toString());
             } else {
                 startRollingUpgrade(targetDir);
@@ -187,8 +193,68 @@ public class MiniCluster {
         return process.exitValue();
     }
 
+    public void mkdirs(String dir) throws IllegalArgumentException, IOException {
+        hdfs.mkdirs(new Path(dir));
+    }
+
     public static void main(String[] argv) throws Exception {
+
         MiniCluster minicluster = new MiniCluster();
         minicluster.start(argv);
     }
+
+    public static class PrepareLocalSource {
+        static String localPrefix = FuzzingTest.localResource;
+        static Random rnd = new Random();
+
+        public static String generateLocalFile() {
+            String filePath = generateLocalDir() + "file" + Integer.toString(rnd.nextInt(suffixBound));
+            return filePath;
+        }
+
+        public static String generateLocalDir() {
+            String dirPath = localPrefix;
+            int depth = 0;
+            while (rnd.nextBoolean() && ++depth < directoryMaxDepth) {
+                dirPath += "dir" + Integer.toString(rnd.nextInt(suffixBound)) + "/";
+            }
+            return dirPath;
+        }
+
+        public static void createLocalFile(String filePath) {
+            try {
+                File file = new File(filePath);
+                file.getParentFile().mkdirs();
+                file.createNewFile();
+                Integer fileLength = rnd.nextInt(localFileLengthLimit);
+                byte[] content = new byte[fileLength];
+                new Random().nextBytes(content);
+                FileOutputStream fos = new FileOutputStream(filePath);
+                fos.write(content);
+                fos.close();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+
+        public static void generateLocalSnapshot() throws IOException {
+            File localSnapshotDir = new File(localPrefix);
+            File localSnapshotCopyDir = new File(FuzzingTest.localResourceCopy);
+            if (localSnapshotDir.exists()) {
+                FileUtils.deleteDirectory(localSnapshotDir);
+            }
+            if (localSnapshotCopyDir.exists()) {
+                FileUtils.deleteDirectory(localSnapshotCopyDir);
+            }
+            localSnapshotDir.mkdirs();
+            for (int i = 0; i < 256; ++i) {
+                String filePath = generateLocalFile();
+                createLocalFile(filePath);
+            }
+            FileUtils.copyDirectory(localSnapshotDir, localSnapshotCopyDir);
+        }
+
+    }
+
 }

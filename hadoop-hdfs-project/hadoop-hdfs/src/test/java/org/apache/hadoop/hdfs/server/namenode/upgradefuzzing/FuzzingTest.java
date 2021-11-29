@@ -19,7 +19,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.Commands.Command;
-import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.Commands.PrepareLocalSource;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.MiniCluster.PrepareLocalSource;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
@@ -52,9 +52,9 @@ public class FuzzingTest {
     static final long txid = 1;
     private final Path dir = new Path("/TestSnapshot");
     static MiniCluster minicluster;
-    static String localResource = "/home/yayu/tmp/localsrc/";
-    static String localResourceCopy = "/home/yayu/tmp/localsrc.cpy/";
-    static String localResourceRepro = "/home/yayu/tmp/localsrc[%s-%s]/";
+    static String localResource = "/home/yayu/tmp/localresource/localsrc/";
+    static String localResourceCopy = "/home/yayu/tmp/localresource/localsrc.cpy/";
+    static String localResourceRepro = "/home/yayu/tmp/localresource/localsrc[%s-%s]/";
 
     Configuration conf;
     MiniDFSCluster cluster;
@@ -67,10 +67,10 @@ public class FuzzingTest {
     public FuzzingTest() {
         conf = new Configuration();
         uuid = UUID.randomUUID();
-        conf.set("hadoop.tmp.dir", "/home/yayu/tmp/minicluster-" + "0");
-        conf.set("hadoop.home.dir", "/home/yayu/tmp/minicluster-" + "0");
-        conf.set("hadoop.log.dir", "/home/yayu/tmp/minicluster-" + "0" + "/logs");
-        conf.set("yarn.log.dir", "/home/yayu/tmp/minicluster-" + "0" + "/logs");
+        conf.set("hadoop.tmp.dir", "/home/yayu/tmp/minicluster/minicluster-" + "0");
+        conf.set("hadoop.home.dir", "/home/yayu/tmp/minicluster/minicluster-" + "0");
+        conf.set("hadoop.log.dir", "/home/yayu/tmp/minicluster/minicluster-" + "0" + "/logs");
+        conf.set("yarn.log.dir", "/home/yayu/tmp/minicluster/minicluster-" + "0" + "/logs");
         conf.set("fs.defaultFS", "hdfs://localhost:10240");
         conf.set("dfs.namenode.http-address", "127.0.0.1:10241");
         conf.set("dfs.datanode.address", "127.0.0.1:10242");
@@ -100,6 +100,7 @@ public class FuzzingTest {
     public static void pretest() throws Exception {
         minicluster = new MiniCluster();
         minicluster.startCluster();
+        minicluster.mkdirs("/workdir");
         PrepareLocalSource.generateLocalSnapshot();
     }
 
@@ -114,8 +115,7 @@ public class FuzzingTest {
     public static void tearDown() throws Exception {
         if (minicluster != null) {
             minicluster.shutDown();
-            FileUtils.moveDirectory(new File(localResourceCopy),
-                    new File(String.format(localResourceRepro, preTimestamp, curTimestamp)));
+            FileUtils.moveDirectory(new File(localResourceCopy), new File(String.format(localResourceRepro, preTimestamp, curTimestamp)));
         }
     }
 
@@ -174,8 +174,8 @@ public class FuzzingTest {
         FileWriter fw = new FileWriter(logFile, true);
         fw.write(commandLog);
         fw.close();
-        File dfsFile = new File("/home/yayu/tmp/minicluster-0");
-        File dfsCopyFile = new File("/home/yayu/tmp/minicluster-" + curTimestamp);
+        File dfsFile = new File("/home/yayu/tmp/minicluster/minicluster-0");
+        File dfsCopyFile = new File("/home/yayu/tmp/minicluster/minicluster-" + curTimestamp);
         FileUtils.copyDirectory(dfsFile, dfsCopyFile);
     }
 
