@@ -92,7 +92,7 @@ public class DFSCommands {
         cpCommand(RandomSource rand) {
             super(rand);
             cmd = "-cp";
-            options = new String[] { "-f", "-p", "-ptopax", "-d" };
+            options = new String[] { "-f", "-p", "-d" };
         }
 
         @Override

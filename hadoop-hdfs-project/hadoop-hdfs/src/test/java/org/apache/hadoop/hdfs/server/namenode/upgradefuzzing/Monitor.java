@@ -1,41 +1,63 @@
 package org.apache.hadoop.hdfs.server.namenode.upgradefuzzing;
 
-import static org.junit.Assert.assertTrue;
-
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.util.UUID;
 import java.util.concurrent.ForkJoinPool;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.log4j.Level;
+import org.slf4j.LoggerFactory;
 
 public class Monitor {
     static long timestamp;
     static int loadTimeout = 20;
-    private static String hadoopNewVPath = "/home/yayu/Project/Upgrade-Fuzzing/hadoop/branch-3.3.0";
+    private static String hadoopNewVerPath = FuzzingTest.hadoopNewVerPath;
     static File workDir = new File("/home/yayu/tmp/minicluster");
     static File failureDir = new File("/home/yayu/tmp/failure/");
     static Integer count = 0;
-    static ForkJoinPool pool = new ForkJoinPool(12);
+    static ForkJoinPool pool = new ForkJoinPool(1);
 
-    public static void loadFSImage(File dir) {
+    static{
+        SnapshotTestHelper.disableLogs();
+        GenericTestUtils.disableLog(LoggerFactory.getLogger(NameNode.class));
+        System.setProperty("hadoop.log.dir", "/home/yayu/tmp/logs");
+        System.setProperty("hadoop.log.file", "hadoop-yayu-namenode-msi.log");
+        System.setProperty("yarn.log.dir", "/home/yayu/tmp/logs");
+        System.setProperty("yarn.log.file", "hadoop-yayu-namenode-msi.log");
+        // GenericTestUtils.setLogLevel(INode.LOG, Level.OFF);
+    }
+
+    public static void loadFSImage(File dir) throws InterruptedException {
         Thread loadThread = new Thread() {
             @Override
             public void run() {
                 Integer exitCode = 0;
-                Boolean ok = false;
+                Boolean ok = true;
+                UUID uuid = UUID.randomUUID();
+                File copyFile = new File("/home/yayu/tmp/copy/" + "minicluster-" + uuid.toString());
+                if (!copyFile.getParentFile().exists()) {
+                    copyFile.getParentFile().mkdirs();
+                }
+                System.out.println("target: " + dir + "\ncopy: " + copyFile.toString());
                 try {
-                    exitCode = systemExecute("timeout " + Integer.toString(loadTimeout) + " ./fuzz_reload.sh " + dir
-                            + " > " + dir + "/log.txt 2>&1", new File(hadoopNewVPath));
-                    if (exitCode == 0) {
-                        ok = true;
-                    } else {
-                        System.out.println("Load " + dir + " exit : " + Integer.toString(exitCode));
-                    }
+                    FileUtils.copyDirectory(dir, copyFile);
                 } catch (IOException e) {
-                    System.out.println("Load " + dir + " exit : " + Integer.toString(exitCode));
+                    System.err.println("copy error");
+                    e.printStackTrace();
+                }
+                MiniCluster minicluster = new MiniCluster();
+                try {
+                    minicluster.startRollingUpgrade(copyFile.toString());
+                } catch (Exception e) {
+                    // TODO Auto-generated catch block
+                    ok = false;
+                    System.err.println("tostring:\n" + e.toString() + "\nmessage:\n" + e.getMessage());
+                    System.err.println("Load " + dir + " exit : " + Integer.toString(exitCode));
                     e.printStackTrace();
                 }
                 if (ok) {
@@ -65,7 +87,9 @@ public class Monitor {
                 }
             }
         };
-        pool.submit(loadThread);
+        loadThread.start();
+        loadThread.join();
+        // pool.submit(loadThread);
     }
 
     public static void main(String[] argv) throws Exception {
@@ -90,6 +114,7 @@ public class Monitor {
                         loadFSImage(f);
                     }
                 }
+                break;
             }
             for (File f : files) {
                 if (f.isDirectory() && f.getName().startsWith("minicluster-")) {
@@ -108,29 +133,7 @@ public class Monitor {
                 empty = false;
                 Thread.sleep(5000);
             }
+            break;
         }
-    }
-
-    public static Integer systemExecute(String cmd, File path) throws IOException {
-        // FileWriter fw = new FileWriter("upgradefuzz.log", true);
-        // fw.write("exec: " + cmd + "\n");
-        // fw.write(path.toString() + "\n");
-        // fw.close();
-        Process process = Runtime.getRuntime().exec(new String[] { "/bin/sh", "-c", cmd }, null, path);
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        String result = "", string;
-        while ((string = reader.readLine()) != null) {
-            // fw.write(string + "\n");
-            // fw.flush();
-            result += string + "\n";
-        }
-        try {
-            process.waitFor();
-        } catch (InterruptedException e) {
-        }
-        // fw.close();
-        reader.close();
-        // System.out.println("exec: " + cmd + " result: " + process.exitValue());
-        return process.exitValue();
     }
 }

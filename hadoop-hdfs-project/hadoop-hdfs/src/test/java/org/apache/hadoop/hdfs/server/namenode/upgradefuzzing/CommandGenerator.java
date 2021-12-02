@@ -108,14 +108,14 @@ public class CommandGenerator {
             cmd = new rmdirCommand(rnd);
             break;
         }
-        case createSnapshot: {
-            cmd = new createSnapshotCommand(rnd);
-            break;
-        }
-        case deleteSnapshot: {
-            cmd = new deleteSnapshotCommand(rnd);
-            break;
-        }
+        // case createSnapshot: {
+        //     cmd = new createSnapshotCommand(rnd);
+        //     break;
+        // }
+        // case deleteSnapshot: {
+        //     cmd = new deleteSnapshotCommand(rnd);
+        //     break;
+        // }
         default: {
             throw new Exception("unsupported command");
         }

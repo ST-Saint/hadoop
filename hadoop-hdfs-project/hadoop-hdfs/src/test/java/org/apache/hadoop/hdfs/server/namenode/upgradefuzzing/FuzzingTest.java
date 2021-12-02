@@ -52,9 +52,12 @@ public class FuzzingTest {
     static final long txid = 1;
     private final Path dir = new Path("/TestSnapshot");
     static MiniCluster minicluster;
+    static String hadoopNewVerPath = "/home/yayu/Project/Upgrade-Fuzzing/hadoop/branch-3.3.0";
     static String localResource = "/home/yayu/tmp/localresource/localsrc/";
     static String localResourceCopy = "/home/yayu/tmp/localresource/localsrc.cpy/";
     static String localResourceRepro = "/home/yayu/tmp/localresource/localsrc[%s-%s]/";
+    static File logPath = new File("/home/yayu/Project/Upgrade-Fuzzing/hadoop/branch-3.1.3/fuzz-results/logs");
+    static File resourcePath = new File("/home/yayu/tmp/localresource");
 
     Configuration conf;
     MiniDFSCluster cluster;
@@ -102,20 +105,21 @@ public class FuzzingTest {
         minicluster.startCluster();
         minicluster.mkdirs("/workdir");
         PrepareLocalSource.generateLocalSnapshot();
+        preTimestamp = null;
     }
 
     // @Before
     public void setUp() throws Exception {
         minicluster = new MiniCluster();
         minicluster.startCluster();
-        preTimestamp = null;
     }
 
     // @After
     public static void tearDown() throws Exception {
         if (minicluster != null) {
             minicluster.shutDown();
-            FileUtils.moveDirectory(new File(localResourceCopy), new File(String.format(localResourceRepro, preTimestamp, curTimestamp)));
+            FileUtils.moveDirectory(new File(localResourceCopy),
+                    new File(String.format(localResourceRepro, preTimestamp, curTimestamp)));
         }
     }
 
@@ -169,7 +173,7 @@ public class FuzzingTest {
             }
         }
         System.out.println("cursor usage: " + fsg.rnd.cursor);
-        File logFile = new File("fuzz-results/logs/upgradefuzz-" + curTimestamp + ".log");
+        File logFile = new File(logPath, "upgradefuzz-" + curTimestamp + ".log");
         logFile.getParentFile().mkdirs();
         FileWriter fw = new FileWriter(logFile, true);
         fw.write(commandLog);

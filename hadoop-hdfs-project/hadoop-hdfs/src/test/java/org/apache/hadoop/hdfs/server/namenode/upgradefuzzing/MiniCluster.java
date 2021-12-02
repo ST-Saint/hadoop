@@ -101,6 +101,10 @@ public class MiniCluster {
     public void startRollingUpgrade(String basePath) throws Exception {
         Configuration conf = new Configuration();
         conf.set(HDFS_MINIDFS_BASEDIR, basePath);
+        /* conf.set("hadoop.log.dir", basePath + "/logs"); */
+        /* conf.set("hadoop.log.file", "hadoop-yayu-namenode-msi.log"); */
+        /* conf.set("yarn.log.dir", basePath + "/logs"); */
+        /* conf.set("yarn.log.file", "hadoop-yayu-namenode-msi.log"); */
         System.out.println("PID: " + ManagementFactory.getRuntimeMXBean().getName());
         System.out.println("directory: " + basePath);
         MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES);

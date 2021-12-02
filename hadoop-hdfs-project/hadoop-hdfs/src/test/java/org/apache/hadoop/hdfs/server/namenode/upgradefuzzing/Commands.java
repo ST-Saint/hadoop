@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -28,7 +29,9 @@ public class Commands {
         // chown,
         copyFromLocal, copyToLocal,
         // count,
-        cp, createSnapshot, deleteSnapshot,
+        cp,
+        // createSnapshot,
+        // deleteSnapshot,
         // df,
         // du,
         // expunge,
@@ -90,16 +93,18 @@ public class Commands {
         // listOpenFiles,
     }
 
-    public static abstract class DFSAdminCommand extends Command {
+    public static class DFSAdminCommand extends Command {
 
         DFSAdminCommand(RandomSource rand) {
             super(rand);
         }
 
+        @Override
         public Integer execute() throws Exception {
             return execute(new HdfsConfiguration());
         }
 
+        @Override
         public Integer execute(Configuration conf) throws Exception {
             String[] argv = generate();
             // FileWriter fw = new FileWriter("upgradefuzz.log", true);
@@ -112,15 +117,17 @@ public class Commands {
         }
     }
 
-    public static abstract class DFSCommand extends Command {
+    public static class DFSCommand extends Command {
         DFSCommand(RandomSource rand) {
             super(rand);
         }
 
+        @Override
         public Integer execute() throws Exception {
             return execute(new Configuration());
         }
 
+        @Override
         public Integer execute(Configuration conf) throws Exception {
             String[] argv = generate();
             // FileWriter fw = new FileWriter("upgradefuzz.log", true);
@@ -135,19 +142,37 @@ public class Commands {
         }
     }
 
-    public static abstract class Command {
+    public static class Command implements AbstractCommand {
         RandomSource rnd;
         List<String> commands = new ArrayList<>();
+        Boolean generated;
         String cmd;
         String[] options;
 
+        public Command(String[] cmds) {
+            generated = true;
+            commands = Arrays.asList(cmds);
+        }
+
         public Command(RandomSource rand) {
+            generated = false;
             rnd = rand;
         }
 
+        public Integer execute() throws Exception {
+            return null;
+
+        }
+
+        public Integer execute(Configuration conf) throws Exception {
+            return null;
+        }
+
         public String[] generate() {
-            generateOptions();
-            generateInternal();
+            if (!generated) {
+                generateOptions();
+                generateInternal();
+            }
             return commands.toArray(new String[0]);
         }
 
@@ -170,10 +195,6 @@ public class Commands {
 
         public void generateInternal() {
         }
-
-        public abstract Integer execute() throws Exception;
-
-        public abstract Integer execute(Configuration conf) throws Exception;
 
         @Override
         public String toString() {
@@ -259,6 +280,13 @@ public class Commands {
                 e.printStackTrace();
             }
         }
+
+    }
+
+    public static interface AbstractCommand {
+        public Integer execute() throws Exception;
+
+        public Integer execute(Configuration conf) throws Exception;
 
     }
 }
