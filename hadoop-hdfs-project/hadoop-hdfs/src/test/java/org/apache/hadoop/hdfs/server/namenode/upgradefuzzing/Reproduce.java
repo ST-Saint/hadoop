@@ -1,5 +1,10 @@
 package org.apache.hadoop.hdfs.server.namenode.upgradefuzzing;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.FuzzingUtils.*;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -8,7 +13,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
@@ -19,15 +23,30 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.Builder;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.Commands.Command;
-import static org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.FuzzingUtils.*;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.slf4j.LoggerFactory;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 
 public class Reproduce {
+
+    public static final String HDFS_MINIDFS_BASEDIR = "hdfs.minidfs.basedir";
+    public static final String miniclusterRoot = "/home/yayu/tmp/minicluster/minicluster-0";
+    public static final String miniclusterRepro = "/home/yayu/tmp/minicluster/minicluster-repro";
+    private int nameNodePort = 10240;
+    private int nameNodeHttpPort = 10241;
+    private String dataNodePort = "127.0.0.1:10242";
+    private String dataNodeIPCPort = "127.0.0.1:10243";
+    private String dataNodeHttpPort = "127.0.0.1:10244";
 
     private static Options options;
     private static CommandLine cmdLine;
@@ -41,14 +60,23 @@ public class Reproduce {
     private Builder builder;
     private static String hadoopNewVerPath = FuzzingTest.hadoopNewVerPath;
 
+    static {
+        // SnapshotTestHelper.disableLogs();
+        // GenericTestUtils.disableLog(LoggerFactory.getLogger(NameNode.class));
+        LogManager.getRootLogger().setLevel(Level.OFF);
+    }
+
     public void loadCommands(String id) throws IOException {
         commands = new ArrayList<>();
         File logFile = new File(logPath.toString(), "upgradefuzz-" + id + ".log");
         BufferedReader reader = new BufferedReader(new FileReader(logFile));
-        String cmd, result;
-        while ((cmd = reader.readLine()) != null) {
+        String index, cmd, result;
+        while ((index = reader.readLine()) != null) {
+            cmd = reader.readLine();
             result = reader.readLine();
-            commands.add(new Command(cmd.split(" ")));
+            // if (result.equals("result: 0")) {
+                commands.add(Command.parseCommand(cmd.split(" ")));
+            // }
         }
         String currentLine = reader.readLine();
         reader.close();
@@ -62,10 +90,18 @@ public class Reproduce {
             Matcher m = p.matcher(f.getName());
             if (m.find()) {
                 Long min = Long.valueOf(m.group(1)), max = Long.valueOf(m.group(2));
-                System.out.println("min: " + min);
-                System.out.println("max: " + max);
-                System.out.println(clusterID + " in range: " + (index >= min && index <= max));
+                // System.out.println(clusterID + " in range: " + (index >= min && index <=
+                // max));
+                if ((index >= min && index <= max)) {
+                    System.out.println(f.getAbsolutePath());
+                    backupResrc = f;
+                    break;
+                }
             }
+        }
+        if (backupResrc == null) {
+            new IllegalArgumentException().printStackTrace();
+            System.exit(0);
         }
         File targetResrc = new File(resourcePath, "localsrc");
         if (targetResrc.exists()) {
@@ -75,19 +111,16 @@ public class Reproduce {
     }
 
     public void replayCommands() throws Exception {
-        cluster = builder.build();
-        cluster.waitActive();
-        fsn = cluster.getNamesystem();
-        hdfs = cluster.getFileSystem();
-        FsShell shell = new FsShell();
-        shell.setConf(conf);
         for (int i = 0; i < commands.size(); ++i) {
-            Command cmd = commands.get(i);
+            final Command cmd = commands.get(i);
             Thread thread = new Thread() {
+                Command _cmd = cmd;
+
                 @Override
                 public void run() {
                     try {
-                        int res = cmd.execute(conf);
+                        int res = _cmd.execute(conf);
+                        System.out.println(_cmd.toString() + "\n" + res);
                     } catch (Exception e) {
                         // TODO Auto-generated catch block
                         e.printStackTrace();
@@ -100,14 +133,51 @@ public class Reproduce {
                 thread.interrupt();
             }
         }
+        Thread.sleep(1000);
+        FileUtils.deleteDirectory(new File(miniclusterRepro));
+        FileUtils.copyDirectory(new File(miniclusterRoot), new File(miniclusterRepro));
+        Thread.sleep(1000);
         cluster.shutdown();
-
     }
 
     private void loadOnNewVersion() throws IOException {
-        String targetDfsDir = "/home/yayu/tmp/minicluster/minicluster-0";
-        Integer exitCode = systemExecute("timeout " + Integer.toString(20) + " ./fuzz_reload.sh " + targetDfsDir + " > "
-                + targetDfsDir + "/log.txt 2>&1", new File(hadoopNewVerPath));
+        System.out.println("\n----------------------------\n\nload on new version");
+        // String targetDfsDir = "/home/yayu/tmp/minicluster/minicluster-0";
+        // Integer exitCode = systemExecute("timeout " + Integer.toString(20) + "
+        // ./fuzz_reload.sh " + targetDfsDir + " > "
+        // + targetDfsDir + "/log.txt 2>&1", new File(hadoopNewVerPath));
+    }
+
+    private void setConfiguration() {
+        conf = new Configuration();
+        conf.set(HDFS_MINIDFS_BASEDIR, miniclusterRoot);
+        conf.set(DFS_DATANODE_ADDRESS_KEY, String.valueOf(dataNodePort));
+        conf.set(DFS_DATANODE_IPC_ADDRESS_KEY, dataNodeIPCPort);
+        conf.set(DFS_DATANODE_HTTP_ADDRESS_KEY, dataNodeHttpPort);
+    }
+
+    private void startup() throws IOException {
+        FileUtils.deleteDirectory(new File(miniclusterRoot));
+        setConfiguration();
+        builder = new MiniDFSCluster.Builder(conf).numDataNodes(1);
+        builder.nameNodePort(nameNodePort);
+        builder.nameNodeHttpPort(nameNodeHttpPort);
+        builder.checkDataNodeAddrConfig(true);
+        builder.checkDataNodeHostConfig(true);
+        StartupOption operation = StartupOption.ROLLINGUPGRADE;
+        operation.setRollingUpgradeStartupOption("started");
+        builder.startupOption(operation);
+        cluster = builder.build();
+        cluster.waitActive();
+        fsn = cluster.getNamesystem();
+        hdfs = cluster.getFileSystem();
+        hdfs.mkdirs(new Path("/workdir"));
+    }
+
+    private void teardown() {
+        if (cluster != null) {
+            cluster.shutdown();
+        }
     }
 
     public void reproduce(String[] argv) throws Exception {
@@ -123,20 +193,17 @@ public class Reproduce {
             return;
         }
         String clusterID = cmdLine.getOptionValue("id");
+
         loadCommands(clusterID);
         loadLocalResource(clusterID);
-
-        conf = new Configuration();
-        builder = new MiniDFSCluster.Builder(conf).numDataNodes(1);
-        StartupOption operation = StartupOption.ROLLINGUPGRADE;
-        operation.setRollingUpgradeStartupOption("started");
-        builder = builder.startupOption(operation);
         try {
+            startup();
             replayCommands();
             loadOnNewVersion();
         } catch (Exception e) {
             System.out.println("tostring:\n" + e.toString() + "\nmessage:\n" + e.getMessage());
             e.printStackTrace();
+            teardown();
         }
     }
 

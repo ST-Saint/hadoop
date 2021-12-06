@@ -58,6 +58,7 @@ public class MiniCluster {
     public void startCluster() throws IOException, InterruptedException {
         conf = new Configuration();
         // conf.set("hadoop.tmp.dir", "/home/yayu/tmp/hdfs-" + "0");
+        FileUtils.deleteDirectory(new File(miniclusterRoot));
         conf.set(HDFS_MINIDFS_BASEDIR, miniclusterRoot);
         conf.set(DFS_DATANODE_ADDRESS_KEY, String.valueOf(dataNodePort));
         conf.set(DFS_DATANODE_IPC_ADDRESS_KEY, dataNodeIPCPort);
@@ -121,7 +122,9 @@ public class MiniCluster {
         assertEquals(1, cluster.getDataNodes().size());
         fsn = cluster.getNamesystem();
         hdfs = cluster.getFileSystem();
-        System.exit(0);
+        if( cmdLine.hasOption("exit") ){
+            System.exit(0);
+        }
         shutDown();
     }
 
@@ -140,6 +143,7 @@ public class MiniCluster {
         options.addOption("t", "test", false, "send fsshell command and test");
         options.addOption("p", "basePath", true, "hadoop base directory");
         options.addOption("c", "copy", false, "load a copied fsimage");
+        options.addOption("exit", false, "exit 0 and don't wait shutdown");
         cmdLine = new BasicParser().parse(options, argv);
         if (cmdLine.hasOption("help")) {
             HelpFormatter formatter = new HelpFormatter();
@@ -167,6 +171,7 @@ public class MiniCluster {
                 System.out.println("target: " + targetDir + "\ncopy: " + copyFile.toString());
                 FileUtils.copyDirectory(new File(targetDir), copyFile);
                 startRollingUpgrade(copyFile.toString());
+                FileUtils.deleteDirectory(copyFile);
             } else {
                 startRollingUpgrade(targetDir);
             }
@@ -260,5 +265,4 @@ public class MiniCluster {
         }
 
     }
-
 }

@@ -1,14 +1,17 @@
 package org.apache.hadoop.hdfs.server.namenode.upgradefuzzing;
 
+import edu.berkeley.cs.jqf.fuzz.Fuzz;
+import edu.berkeley.cs.jqf.fuzz.JQF;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
 import java.util.Random;
 import java.util.UUID;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsShell;
@@ -24,9 +27,6 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import edu.berkeley.cs.jqf.fuzz.Fuzz;
-import edu.berkeley.cs.jqf.fuzz.JQF;
 
 @RunWith(JQF.class)
 public class FuzzingTest {
@@ -101,6 +101,8 @@ public class FuzzingTest {
     }
 
     public static void pretest() throws Exception {
+
+        System.out.println("pretest: start minicluster");
         minicluster = new MiniCluster();
         minicluster.startCluster();
         minicluster.mkdirs("/workdir");
@@ -117,10 +119,14 @@ public class FuzzingTest {
     // @After
     public static void tearDown() throws Exception {
         if (minicluster != null) {
+            System.out.println("teardown: shutdown minicluster");
             minicluster.shutDown();
+            System.out.println("teardown: copy local resources");
             FileUtils.moveDirectory(new File(localResourceCopy),
                     new File(String.format(localResourceRepro, preTimestamp, curTimestamp)));
         }
+        commandLog = "";
+        commandIndex = 0;
     }
 
     @Test
@@ -152,9 +158,12 @@ public class FuzzingTest {
                             Command cmd;
                             cmd = fsg.generate();
                             int res = cmd.execute(conf);
+                            // int res = -1;
                             String cmdString = cmd.toString();
-                            commandLog += "CMD: " + Integer.toString(++commandIndex) + ": " + cmdString + "\nresult: "
+                            commandLog += "CMD " + Integer.toString(++commandIndex) + ":\n" + cmdString + "\nresult: "
                                     + Integer.toString(res) + "\n";
+                            System.out.println("CMD " + Integer.toString(commandIndex) + ":\n" + cmdString
+                                    + "\nresult: " + Integer.toString(res) + "\n");
                         } catch (Exception e) {
                             // TODO Auto-generated catch block
                             e.printStackTrace();
@@ -195,8 +204,8 @@ public class FuzzingTest {
             // "-allowSnapshot", "/user/yayu" });
             // res = ToolRunner.run(conf, shell, new String[] { "-createSnapshot",
             // "/user/yayu/", "s0" });
-            // res = ToolRunner.run(conf, new DFSAdmin(conf), new String[] { "-safemode",
-            // "enter" });
+            // res = ToolRunner.run(conf, new DFSAdmin(conf), new String[] {
+            // "-safemode", "enter" });
 
             Thread thread = new Thread() {
                 @Override
@@ -219,12 +228,13 @@ public class FuzzingTest {
             // thread.wait(1000);
             // res = ToolRunner.run(conf, shell, new String[] { "-mkdir", "-p",
             // "/user/yayu/" });
-            // res = ToolRunner.run(conf, new DFSAdmin(conf), new String[] { "-mkdir", "-p",
+            // res = ToolRunner.run(conf, new DFSAdmin(conf), new String[] { "-mkdir",
+            // "-p",
             // "/user/yayu/" });
             // res = ToolRunner.run(conf, new DFSAdmin(conf), new String[] {
             // "-saveNamespace" });
-            // res = ToolRunner.run(conf, new DFSAdmin(conf), new String[] { "-safemode",
-            // "leave" });
+            // res = ToolRunner.run(conf, new DFSAdmin(conf), new String[] {
+            // "-safemode", "leave" });
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -247,11 +257,16 @@ public class FuzzingTest {
         // Files.write(seedFile.toPath(), b);
     }
 
+    public static void createSeed() throws IOException {
+        File seedFile = new File("/home/yayu/Project/Upgrade-Fuzzing/hadoop/branch-3.1.3/fuzz-seeds/seed");
+        byte[] b = new byte[512];
+        new Random(System.currentTimeMillis()).nextBytes(b);
+        Files.write(seedFile.toPath(), b);
+    }
+
     public static void main(String[] argv) throws Exception {
         FuzzingTest fz = new FuzzingTest();
-        byte[] b = new byte[1024 * 32];
-        new Random(System.currentTimeMillis()).nextBytes(b);
-        // fz.fuzzCommand(new ByteArrayInputStream(b));
-        fz.testCommand();
+        createSeed();
+        // fz.testCommand();
     }
 }

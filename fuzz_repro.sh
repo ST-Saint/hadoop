@@ -19,4 +19,4 @@ javac -cp "${classpath}" ${upgradefuzz_dir}/*.java -Xlint:deprecation -d ${class
 
 echo ${@}
 
-java -cp ${classpath} org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.Reproduce "${@}"
+java -cp ${classpath} org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.Reproduce -id "${@}"

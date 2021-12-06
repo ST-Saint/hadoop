@@ -27,8 +27,7 @@ jqf/bin/jqf-afl-fuzz
 -   build
 
 ```bash
-mvn clean compile test-compile
-mvn dependency:copy-dependencies
+mvn clean compile test-compile && mvn dependency:copy-dependencies
 mvn -Pdist -DskipTests package
 ```
 

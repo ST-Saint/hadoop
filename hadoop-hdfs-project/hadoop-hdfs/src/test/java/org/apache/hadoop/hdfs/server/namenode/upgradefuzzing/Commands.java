@@ -61,7 +61,7 @@ public class Commands {
         // usage,
         //
         // report,
-        safemode, saveNamespace, rollEdits,
+        safemode(true), saveNamespace(true), rollEdits(true),
         // restoreFailedStorage,
         // refreshNodes,
         // setQuota,
@@ -84,19 +84,33 @@ public class Commands {
         // setBalancerBandwidth,
         // getBalancerBandwidth,
         // fetchImage,
-        allowSnapshot, disallowSnapshot,
+        allowSnapshot(true), disallowSnapshot(true);
         // shutdownDatanode,
         // evictWriters,
         // getDatanodeInfo,
         // metasave,
         // triggerBlockReport,
         // listOpenFiles,
+        //
+
+        boolean dfsAdmin;
+        private CommandsEnum(){
+            this.dfsAdmin = false ;
+        }
+
+        private CommandsEnum(Boolean admin){
+            this.dfsAdmin  = admin;
+        }
     }
 
     public static class DFSAdminCommand extends Command {
 
         DFSAdminCommand(RandomSource rand) {
             super(rand);
+        }
+
+        public DFSAdminCommand(String[] cmds) {
+            super(cmds);
         }
 
         @Override
@@ -120,6 +134,10 @@ public class Commands {
     public static class DFSCommand extends Command {
         DFSCommand(RandomSource rand) {
             super(rand);
+        }
+
+        public DFSCommand(String[] cmds) {
+            super(cmds);
         }
 
         @Override
@@ -149,7 +167,18 @@ public class Commands {
         String cmd;
         String[] options;
 
-        public Command(String[] cmds) {
+        public static Command parseCommand(String[] cmds) {
+            String cmdType = cmds[0].substring(1);
+            Command cmd = null;
+            if( CommandsEnum.valueOf(cmdType).dfsAdmin ){
+                cmd = new DFSAdminCommand(cmds);
+            }else{
+                cmd = new DFSCommand(cmds);
+            }
+            return cmd;
+        }
+
+        public Command(String[] cmds){
             generated = true;
             commands = Arrays.asList(cmds);
         }
