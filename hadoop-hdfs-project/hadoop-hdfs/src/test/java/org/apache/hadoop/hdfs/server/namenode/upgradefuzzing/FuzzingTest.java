@@ -67,6 +67,8 @@ public class FuzzingTest {
     private static String curTimestamp;
     private static String preTimestamp;
 
+    private static Path workdir = new Path("/workdir");
+
     public FuzzingTest() {
         conf = new Configuration();
         uuid = UUID.randomUUID();
@@ -105,7 +107,7 @@ public class FuzzingTest {
         System.out.println("pretest: start minicluster");
         minicluster = new MiniCluster();
         minicluster.startCluster();
-        minicluster.mkdirs("/workdir");
+        minicluster.mkdirs(workdir);
         PrepareLocalSource.generateLocalSnapshot();
         preTimestamp = null;
     }
@@ -127,6 +129,7 @@ public class FuzzingTest {
         }
         commandLog = "";
         commandIndex = 0;
+        fuzzingIndex = 0;
     }
 
     @Test
@@ -137,6 +140,7 @@ public class FuzzingTest {
 
     public static String commandLog = "";
     public static Integer commandIndex = 0;
+    public static Integer fuzzingIndex = 0;
 
     @Fuzz
     public void fuzzCommand(InputStream input) throws Exception {
@@ -145,6 +149,7 @@ public class FuzzingTest {
         if (preTimestamp == null) {
             preTimestamp = curTimestamp;
         }
+        minicluster.mkdirs(new Path(workdir, "subdir" + Integer.toString(++fuzzingIndex)));
         FsShell shell = null;
         CommandGenerator fsg = new CommandGenerator(input);
         // commandLog = "";
@@ -157,24 +162,28 @@ public class FuzzingTest {
                         try {
                             Command cmd;
                             cmd = fsg.generate();
+                            String cmdString = String.join(" ", cmd.generate());
+                            commandLog += "CMD " + Integer.toString(++commandIndex) + ":\n" + cmdString + "\nresult: ";
                             int res = cmd.execute(conf);
-                            // int res = -1;
-                            String cmdString = cmd.toString();
-                            commandLog += "CMD " + Integer.toString(++commandIndex) + ":\n" + cmdString + "\nresult: "
-                                    + Integer.toString(res) + "\n";
-                            System.out.println("CMD " + Integer.toString(commandIndex) + ":\n" + cmdString
-                                    + "\nresult: " + Integer.toString(res) + "\n");
+                            commandLog += Integer.toString(res);
+                            // System.out.println("CMD " + Integer.toString(commandIndex) + ":\n" +
+                            // cmdString
+                            // + "\nresult: " + Integer.toString(res) + "\n");
                         } catch (Exception e) {
                             // TODO Auto-generated catch block
                             e.printStackTrace();
                         }
                     }
                 };
+                Long startTime = System.currentTimeMillis(), endTime;
                 thread.start();
-                thread.join(10000);
+                thread.join(20000);
                 if (thread.isAlive()) {
                     thread.interrupt();
+                    commandLog += "TIMEOUT";
                 }
+                endTime = System.currentTimeMillis();
+                commandLog += "\ntime usage: " + Double.toString((endTime - startTime) / 1000.) + "\n";
             } finally {
                 if (shell != null) {
                     shell.close();

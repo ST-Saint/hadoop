@@ -94,12 +94,13 @@ public class Commands {
         //
 
         boolean dfsAdmin;
-        private CommandsEnum(){
-            this.dfsAdmin = false ;
+
+        private CommandsEnum() {
+            this.dfsAdmin = false;
         }
 
-        private CommandsEnum(Boolean admin){
-            this.dfsAdmin  = admin;
+        private CommandsEnum(Boolean admin) {
+            this.dfsAdmin = admin;
         }
     }
 
@@ -170,15 +171,15 @@ public class Commands {
         public static Command parseCommand(String[] cmds) {
             String cmdType = cmds[0].substring(1);
             Command cmd = null;
-            if( CommandsEnum.valueOf(cmdType).dfsAdmin ){
+            if (CommandsEnum.valueOf(cmdType).dfsAdmin) {
                 cmd = new DFSAdminCommand(cmds);
-            }else{
+            } else {
                 cmd = new DFSCommand(cmds);
             }
             return cmd;
         }
 
-        public Command(String[] cmds){
+        public Command(String[] cmds) {
             generated = true;
             commands = Arrays.asList(cmds);
         }
@@ -201,6 +202,7 @@ public class Commands {
             if (!generated) {
                 generateOptions();
                 generateInternal();
+                generated = true;
             }
             return commands.toArray(new String[0]);
         }
@@ -244,7 +246,7 @@ public class Commands {
         }
 
         public String generateHdfsDir() {
-            String dirPath = "/workdir/";
+            String dirPath = "/workdir/subdir"+Integer.toString(FuzzingTest.fuzzingIndex) + "/";
             int depth = 0;
             while (rnd.nextBoolean() && ++depth < directoryMaxDepth) {
                 dirPath += "dir" + Integer.toString(rnd.nextInt(suffixBound)) + "/";

@@ -47,6 +47,7 @@ public class Reproduce {
     private String dataNodePort = "127.0.0.1:10242";
     private String dataNodeIPCPort = "127.0.0.1:10243";
     private String dataNodeHttpPort = "127.0.0.1:10244";
+    private static Path workdir = new Path("/workdir");
 
     private static Options options;
     private static CommandLine cmdLine;
@@ -70,12 +71,13 @@ public class Reproduce {
         commands = new ArrayList<>();
         File logFile = new File(logPath.toString(), "upgradefuzz-" + id + ".log");
         BufferedReader reader = new BufferedReader(new FileReader(logFile));
-        String index, cmd, result;
+        String index, cmd, result, time;
         while ((index = reader.readLine()) != null) {
             cmd = reader.readLine();
             result = reader.readLine();
+            time = reader.readLine();
             // if (result.equals("result: 0")) {
-                commands.add(Command.parseCommand(cmd.split(" ")));
+            commands.add(Command.parseCommand(cmd.split(" ")));
             // }
         }
         String currentLine = reader.readLine();
@@ -110,8 +112,18 @@ public class Reproduce {
         FileUtils.copyDirectory(backupResrc, targetResrc);
     }
 
+    static String commandLog = "";
+    static Integer commandIndex = 0;
+
     public void replayCommands() throws Exception {
+        Integer fuzzingCount = 1, cmdCount = 0;
         for (int i = 0; i < commands.size(); ++i) {
+
+            if (cmdCount.equals(0)) {
+                hdfs.mkdirs(new Path(workdir, "subdir" + Integer.toString(++fuzzingCount)));
+            }
+            cmdCount = (cmdCount + 1) % 20;
+
             final Command cmd = commands.get(i);
             Thread thread = new Thread() {
                 Command _cmd = cmd;
@@ -119,7 +131,10 @@ public class Reproduce {
                 @Override
                 public void run() {
                     try {
+                        String cmdString = _cmd.toString();
+                        commandLog += "CMD " + Integer.toString(++commandIndex) + ":\n" + cmdString + "\nresult: ";
                         int res = _cmd.execute(conf);
+                        commandLog += Integer.toString(res);
                         System.out.println(_cmd.toString() + "\n" + res);
                     } catch (Exception e) {
                         // TODO Auto-generated catch block
@@ -127,12 +142,18 @@ public class Reproduce {
                     }
                 }
             };
+            Long startTime = System.currentTimeMillis(), endTime;
             thread.start();
-            thread.join(10000);
+            thread.join(20000);
             if (thread.isAlive()) {
                 thread.interrupt();
+                commandLog += "TIMEOUT";
             }
+            endTime = System.currentTimeMillis();
+            commandLog += "\ntime usage: " + Double.toString((endTime - startTime) / 1000.) + "\n";
+            Thread.sleep(1000);
         }
+        System.out.println(commandLog);
         Thread.sleep(1000);
         FileUtils.deleteDirectory(new File(miniclusterRepro));
         FileUtils.copyDirectory(new File(miniclusterRoot), new File(miniclusterRepro));

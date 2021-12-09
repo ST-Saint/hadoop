@@ -118,11 +118,16 @@ public class MiniCluster {
         // try {
         cluster = builder.build();
         cluster.waitActive();
-        assertEquals(1, cluster.getNumNameNodes());
-        assertEquals(1, cluster.getDataNodes().size());
+        try {
+            assertEquals(1, cluster.getNumNameNodes());
+            assertEquals(1, cluster.getDataNodes().size());
+        } catch (AssertionError e) {
+            shutDown();
+            System.exit(1);
+        }
         fsn = cluster.getNamesystem();
         hdfs = cluster.getFileSystem();
-        if( cmdLine.hasOption("exit") ){
+        if (cmdLine.hasOption("exit")) {
             System.exit(0);
         }
         shutDown();
@@ -180,26 +185,8 @@ public class MiniCluster {
         }
     }
 
-    public static Integer systemExecute(String cmd, File path) throws IOException {
-        // FileWriter fw = new FileWriter("upgradefuzz.log", true);
-        // fw.write("exec: " + cmd + "\n");
-        // fw.write(path.toString() + "\n");
-        // fw.flush();
-        Process process = Runtime.getRuntime().exec(cmd, null, path);
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        String result = "", string;
-        while ((string = reader.readLine()) != null) {
-            // fw.write(string + "\n");
-            // fw.flush();
-            // result += string + "\n";
-        }
-        try {
-            process.waitFor();
-        } catch (InterruptedException e) {
-        }
-        // fw.close();
-        reader.close();
-        return process.exitValue();
+    public void mkdirs(Path dir) throws IOException {
+        hdfs.mkdirs(dir);
     }
 
     public void mkdirs(String dir) throws IllegalArgumentException, IOException {

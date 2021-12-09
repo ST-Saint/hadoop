@@ -2,8 +2,11 @@ package org.apache.hadoop.hdfs.server.namenode.upgradefuzzing;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ForkJoinPool;
 
@@ -12,6 +15,7 @@ import static org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.FuzzingUtils
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
@@ -30,7 +34,8 @@ public class Monitor {
     static ForkJoinPool pool = new ForkJoinPool(4);
     static String hadoopRoot = "/home/yayu/Project/Upgrade-Fuzzing/hadoop/branch-3.3.0";
 
-    static Pattern exceptionPattern = Pattern.compile("(?m)^.*?Exception.*(?:\\R+^\\s*at .*)+");
+    static Pattern exceptionPattern = Pattern.compile("(?m)^.*?Exception[^\\n]*((\\R^\\s*at .*)+)");
+    static Set<String> exceptionSet = new HashSet<>();
 
     static {
         // SnapshotTestHelper.disableLogs();
@@ -48,7 +53,7 @@ public class Monitor {
             @Override
             public void run() {
                 Integer exitCode = 0;
-                Boolean ok = true;
+                Boolean ok = true, duplicate = false;
                 UUID uuid = UUID.randomUUID();
                 File copyDir = new File("/home/yayu/tmp/copy/" + "minicluster-" + uuid.toString());
                 if (!copyDir.getParentFile().exists()) {
@@ -71,12 +76,7 @@ public class Monitor {
                     fis.close();
                     String logContent = new String(logBytes, "UTF-8");
                     Matcher m = exceptionPattern.matcher(logContent);
-                    if (m.find()) {
-                        int cnt = m.groupCount();
-                        for (int i = 1; i < cnt; ++i) {
-                            System.out.println("get excepiton " + i + " " + m.group(i));
-                        }
-                    }
+                    duplicate = checkDuplication(m);
                     if (exitCode != 0) {
                         ok = false;
                     }
@@ -84,18 +84,8 @@ public class Monitor {
                     ok = false;
                     e.printStackTrace();
                 }
-                // MiniCluster minicluster = new MiniCluster();
-                // try {
-                // minicluster.startRollingUpgrade(copyFile.toString());
-                // } catch (Exception e) {
-                // ok = false;
-                // System.err.println("tostring:\n" + e.toString() + "\nmessage:\n" +
-                // e.getMessage());
-                // System.err.println("Load " + dir + " exit : " + Integer.toString(exitCode));
-                // e.printStackTrace();
-                // }
                 try {
-                    if (ok) {
+                    if (ok || duplicate) {
                         FileUtils.deleteDirectory(dir);
                     } else {
                         backupDFS(dir);
@@ -112,6 +102,7 @@ public class Monitor {
                 }
             }
 
+
             void backupDFS(File dir) {
                 try {
                     System.out.println("fail to load target dir: " + new File(failureDir, dir.getName()) + "\n");
@@ -126,9 +117,41 @@ public class Monitor {
         // pool.submit(loadThread);
     }
 
+    static Boolean checkDuplication(Matcher m) {
+        String key = "";
+        while (m.find()) {
+            key += m.group(1);
+        }
+        if( exceptionSet.contains(key) ){
+        return true;
+        }else{
+            exceptionSet.add(key);
+            return false;
+        }
+
+    }
+
+    static void mockMain() throws Exception {
+        File logFile = new File("/home/yayu/tmp/failure/minicluster-1638797619085/log.txt");
+        FileInputStream fis = new FileInputStream(logFile);
+        byte[] logBytes = new byte[(int) logFile.length()];
+        fis.read(logBytes);
+        fis.close();
+        String logContent = new String(logBytes, "UTF-8");
+        Matcher m = exceptionPattern.matcher(logContent);
+        // System.out.println(StringEscapeUtils.escapeJava(logContent));
+        while (m.find()) {
+            int cnt = m.groupCount();
+            for (int i = 1; i < cnt; ++i) {
+                System.out.println("get excepiton " + i + "\n" + m.group(i));
+            }
+        }
+        System.exit(0);
+    }
+
     public static void main(String[] argv) throws Exception {
         timestamp = 0;
-        System.out.println("create dirs " + failureDir + " " + failureDir.exists());
+        System.out.println("create dirs " + failureDir);
         if (!failureDir.exists()) {
             failureDir.mkdirs();
         }
