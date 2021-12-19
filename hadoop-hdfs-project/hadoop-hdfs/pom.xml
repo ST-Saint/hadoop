@@ -37,6 +37,20 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <dependencies>
     <dependency>
+      <groupId>edu.berkeley.cs.jqf</groupId>
+      <artifactId>jqf-fuzz</artifactId>
+      <!-- confirm the latest version at: https://mvnrepository.com/artifact/edu.berkeley.cs.jqf -->
+      <version>1.7</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- JUnit-QuickCheck: API to write generators -->
+    <dependency>
+      <groupId>com.pholser</groupId>
+      <artifactId>junit-quickcheck-generators</artifactId>
+      <version>0.8</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-annotations</artifactId>
       <scope>provided</scope>
@@ -229,6 +243,12 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>edu.berkeley.cs.jqf</groupId>
+        <artifactId>jqf-maven-plugin</artifactId>
+        <!-- confirm the latest version at: https://mvnrepository.com/artifact/edu.berkeley.cs.jqf -->
+        <version>1.7</version>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>

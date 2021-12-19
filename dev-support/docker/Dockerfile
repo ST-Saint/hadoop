@@ -94,12 +94,12 @@ RUN apt-get -q update \
 # OpenJDK 7
 #######
 # hadolint ignore=DL3008
-RUN add-apt-repository ppa:openjdk-r/ppa
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends openjdk-7-jdk \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-RUN update-java-alternatives --set java-1.7.0-openjdk-amd64
+# RUN add-apt-repository ppa:openjdk-r/ppa
+# RUN apt-get -q update \
+#     && apt-get -q install -y --no-install-recommends openjdk-7-jdk \
+#     && apt-get clean \
+#     && rm -rf /var/lib/apt/lists/*
+# RUN update-java-alternatives --set java-1.7.0-openjdk-amd64
 
 ######
 # Install cmake 3.1.0 (3.5.1 ships with Xenial)
@@ -162,11 +162,11 @@ ENV FINDBUGS_HOME /usr
 # Install shellcheck (0.4.6, the latest as of 2017-09-26)
 ####
 # hadolint ignore=DL3008
-RUN add-apt-repository -y ppa:hvr/ghc \
-    && apt-get -q update \
-    && apt-get -q install -y --no-install-recommends shellcheck ghc-8.0.2 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# RUN add-apt-repository -y ppa:hvr/ghc \
+#     && apt-get -q update \
+#     && apt-get -q install -y --no-install-recommends shellcheck ghc-8.0.2 \
+#     && apt-get clean \
+#     && rm -rf /var/lib/apt/lists/*
 
 ####
 # Install bats (0.4.0, the latest as of 2017-09-26, ships with Xenial)
@@ -195,11 +195,10 @@ RUN pip2 install python-dateutil==2.7.3
 # Install node.js for web UI framework (4.2.6 ships with Xenial)
 ###
 # hadolint ignore=DL3008, DL3016
-RUN apt-get -q update \
-    && apt-get install -y --no-install-recommends nodejs npm \
+RUN curl -L -s -S https://deb.nodesource.com/setup_12.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && ln -s /usr/bin/nodejs /usr/bin/node \
     && npm install npm@latest -g \
     && npm install -g jshint
 
