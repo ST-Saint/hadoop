@@ -50,7 +50,7 @@ public class DFSCommands {
         copyFromLocalCommand(RandomSource rand) {
             super(rand);
             cmd = "-copyFromLocal";
-            options = new String[] { "-f", "-p", "-l", "-d", "-t 4" };
+            options = new String[] { "-f", "-p", "-l", "-d" };
         }
 
         @Override
