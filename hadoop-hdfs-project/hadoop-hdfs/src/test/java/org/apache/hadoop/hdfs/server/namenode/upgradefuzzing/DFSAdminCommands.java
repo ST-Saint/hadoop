@@ -8,7 +8,7 @@ public class DFSAdminCommands {
         saveNamespaceCommand(RandomSource rand) {
             super(rand);
             cmd = "-saveNamespace";
-            options = new String[] { "-beforeShutdown" };
+            options = new String[0];
         }
     }
 

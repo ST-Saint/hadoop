@@ -62,11 +62,18 @@ public class MiniCluster {
     public static final int localFileLengthLimit = 10240;
 
     public void startCluster() throws IOException, InterruptedException {
-        startCluster(miniclusterRoot);
+        startCluster(miniclusterRoot, new Configuration());
     }
 
     public void startCluster(String root) throws IOException, InterruptedException {
-        conf = new Configuration();
+        startCluster(root, new Configuration());
+    }
+
+    public void startCluster(Configuration conf) throws IOException, InterruptedException {
+        startCluster(miniclusterRoot, conf);
+    }
+
+    public void startCluster(String root, Configuration conf) throws IOException, InterruptedException {
         // conf.set("hadoop.tmp.dir", "/home/yayu/tmp/hdfs-" + "0");
         FileUtils.deleteDirectory(new File(miniclusterRoot));
         conf.set(HDFS_MINIDFS_BASEDIR, miniclusterRoot);
@@ -236,12 +243,12 @@ public class MiniCluster {
         }
     }
 
-    public void mkdirs(Path dir) throws IOException {
-        hdfs.mkdirs(dir);
+    public Boolean mkdirs(Path dir) throws IOException {
+        return hdfs.mkdirs(dir);
     }
 
-    public void mkdirs(String dir) throws IllegalArgumentException, IOException {
-        hdfs.mkdirs(new Path(dir));
+    public Boolean mkdirs(String dir) throws IllegalArgumentException, IOException {
+        return hdfs.mkdirs(new Path(dir));
     }
 
     public static void main(String[] argv) throws Exception {

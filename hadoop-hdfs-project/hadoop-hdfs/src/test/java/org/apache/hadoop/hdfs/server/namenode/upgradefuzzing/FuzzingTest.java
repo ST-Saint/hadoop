@@ -59,17 +59,17 @@ public class FuzzingTest {
     static File logPath = new File("/home/yayu/Project/Upgrade-Fuzzing/hadoop/branch-3.1.3/fuzz-results/logs");
     static File resourcePath = new File("/home/yayu/tmp/localresource");
 
-    Configuration conf;
-    MiniDFSCluster cluster;
-    FSNamesystem fsn;
-    DistributedFileSystem hdfs;
-    UUID uuid;
+    static Configuration conf;
+    static MiniDFSCluster cluster;
+    static FSNamesystem fsn;
+    static DistributedFileSystem hdfs;
+    static UUID uuid;
     private static String curTimestamp;
     private static String preTimestamp;
 
     private static Path workdir = new Path("/workdir");
 
-    public FuzzingTest() {
+    static {
         conf = new Configuration();
         uuid = UUID.randomUUID();
         conf.set("hadoop.tmp.dir", "/home/yayu/tmp/minicluster/minicluster-" + "0");
@@ -82,6 +82,10 @@ public class FuzzingTest {
         conf.set("dfs.datanode.http.address", "127.0.0.1:10244");
         conf.set("dfs.datanode.ipc.address", "127.0.0.1:10243");
         conf.set("dfs.replication", "1");
+    }
+
+    public FuzzingTest() {
+
     }
 
     private static final String HDFS_MINIDFS_BASEDIR = "hdfs.minidfs.basedir";
@@ -103,10 +107,9 @@ public class FuzzingTest {
     }
 
     public static void pretest() throws Exception {
-
         System.out.println("pretest: start minicluster");
         minicluster = new MiniCluster();
-        minicluster.startCluster();
+        minicluster.startCluster(conf);
         minicluster.mkdirs(workdir);
         PrepareLocalSource.generateLocalSnapshot();
         preTimestamp = null;
@@ -166,9 +169,8 @@ public class FuzzingTest {
                             commandLog += "CMD " + Integer.toString(++commandIndex) + ":\n" + cmdString + "\nresult: ";
                             int res = cmd.execute(conf);
                             commandLog += Integer.toString(res);
-                            // System.out.println("CMD " + Integer.toString(commandIndex) + ":\n" +
-                            // cmdString
-                            // + "\nresult: " + Integer.toString(res) + "\n");
+                            System.out.println("CMD " + Integer.toString(commandIndex) + ":\n" + cmdString
+                                    + "\nresult: " + Integer.toString(res));
                         } catch (Exception e) {
                             // TODO Auto-generated catch block
                             e.printStackTrace();

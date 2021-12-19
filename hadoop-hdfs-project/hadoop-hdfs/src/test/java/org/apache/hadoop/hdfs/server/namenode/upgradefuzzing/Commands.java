@@ -214,7 +214,7 @@ public class Commands {
 
         public void generateFlags() {
             for (int i = 0; i < options.length; i++) {
-                if (rnd.nextInt(options.length + 1) == 0) {
+                if (rnd.nextInt(options.length * 2 + 1) == 0) {
                     commands.add(options[i]);
                 }
             }
@@ -246,7 +246,7 @@ public class Commands {
         }
 
         public String generateHdfsDir() {
-            String dirPath = "/workdir/subdir"+Integer.toString(FuzzingTest.fuzzingIndex) + "/";
+            String dirPath = "/workdir/subdir" + Integer.toString(FuzzingTest.fuzzingIndex) + "/";
             int depth = 0;
             while (rnd.nextBoolean() && ++depth < directoryMaxDepth) {
                 dirPath += "dir" + Integer.toString(rnd.nextInt(suffixBound)) + "/";

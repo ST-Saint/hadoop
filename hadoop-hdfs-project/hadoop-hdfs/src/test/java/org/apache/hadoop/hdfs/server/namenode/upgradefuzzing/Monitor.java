@@ -68,7 +68,7 @@ public class Monitor {
                     String logContent = new String(logBytes, "UTF-8");
                     Matcher m = exceptionPattern.matcher(logContent);
                     // duplicate = checkDuplication(m);
-                    if (exitCode != 0) {
+                    if (exitCode == 0) {
                         fail = false;
                     }
                 } catch (IOException e) {
@@ -105,19 +105,20 @@ public class Monitor {
         Boolean loadFailure = false;
         for (Integer epoch = 0; epoch < 2; ++epoch) {
             File logFile = new File(dir, "log" + Integer.toString(epoch) + ".txt");
-            loadFailure = loadFailure | loadAndTest(copyDir, logFile);
+            Boolean fail = loadAndTest(copyDir, logFile);
+            loadFailure = loadFailure | fail;
+            System.out.println("Dir: " + dir + "\n" + epoch + " " + fail);
         }
         try {
             if (loadFailure) {
                 backupDFS(dir);
             } else {
-                // FileUtils.deleteDirectory(dir);
+                FileUtils.deleteDirectory(dir);
             }
             FileUtils.deleteDirectory(copyDir);
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     static void backupDFS(File dir) {
