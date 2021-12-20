@@ -48,27 +48,18 @@ public class Monitor {
         // GenericTestUtils.setLogLevel(INode.LOG, Level.OFF);
     }
 
-    public static void loadFSImage(File dir) throws InterruptedException {
+    static Boolean fail = null;
+
+    static Boolean loadAndTest(final File dir, final File logFile) throws Exception {
+        fail = true;
         Thread loadThread = new Thread() {
             @Override
             public void run() {
                 Integer exitCode = 0;
-                Boolean ok = true, duplicate = false;
-                UUID uuid = UUID.randomUUID();
-                File copyDir = new File("/home/yayu/tmp/copy/" + "minicluster-" + uuid.toString());
-                if (!copyDir.getParentFile().exists()) {
-                    copyDir.getParentFile().mkdirs();
-                }
+                // Boolean ok = true, duplicate = false;
                 // System.out.println("target: " + dir + "\ncopy: " + copyDir.toString());
                 try {
-                    FileUtils.copyDirectory(dir, copyDir);
-                } catch (IOException e) {
-                    System.err.println("copy error");
-                    e.printStackTrace();
-                }
-                File logFile = new File(dir, "log.txt");
-                try {
-                    exitCode = systemExecute("./fuzz.sh MiniCluster -r -c -p " + copyDir + " > " + logFile + " 2>&1",
+                    exitCode = systemExecute("./fuzz.sh MiniCluster -r -c -p " + dir + " > " + logFile + " 2>&1",
                             new File(hadoopRoot));
                     FileInputStream fis = new FileInputStream(logFile);
                     byte[] logBytes = new byte[(int) logFile.length()];
@@ -76,22 +67,12 @@ public class Monitor {
                     fis.close();
                     String logContent = new String(logBytes, "UTF-8");
                     Matcher m = exceptionPattern.matcher(logContent);
-                    duplicate = checkDuplication(m);
-                    if (exitCode != 0) {
-                        ok = false;
+                    // duplicate = checkDuplication(m);
+                    if (exitCode == 0) {
+                        fail = false;
                     }
                 } catch (IOException e) {
-                    ok = false;
-                    e.printStackTrace();
-                }
-                try {
-                    if (ok || duplicate) {
-                        FileUtils.deleteDirectory(dir);
-                    } else {
-                        backupDFS(dir);
-                    }
-                    FileUtils.deleteDirectory(copyDir);
-                } catch (IOException e) {
+                    fail = false;
                     e.printStackTrace();
                 }
                 synchronized (count) {
@@ -102,19 +83,51 @@ public class Monitor {
                 }
             }
 
-
-            void backupDFS(File dir) {
-                try {
-                    System.out.println("fail to load target dir: " + new File(failureDir, dir.getName()) + "\n");
-                    FileUtils.moveDirectory(dir, new File(failureDir, dir.getName()));
-                } catch (IOException e) {
-                    System.out.println("Failed in renaming " + dir);
-                }
-            }
         };
         loadThread.start();
         loadThread.join();
-        // pool.submit(loadThread);
+        return fail;
+    }
+
+    public static void loadFSImage(File dir) throws Exception {
+        UUID uuid = UUID.randomUUID();
+        File copyDir = new File("/home/yayu/tmp/copy/" + "minicluster-" + uuid.toString());
+        if (!copyDir.getParentFile().exists()) {
+            copyDir.getParentFile().mkdirs();
+        }
+        try {
+            FileUtils.copyDirectory(dir, copyDir);
+        } catch (IOException e) {
+            System.err.println("copy error");
+            e.printStackTrace();
+        }
+
+        Boolean loadFailure = false;
+        for (Integer epoch = 0; epoch < 2; ++epoch) {
+            File logFile = new File(dir, "log" + Integer.toString(epoch) + ".txt");
+            Boolean fail = loadAndTest(copyDir, logFile);
+            loadFailure = loadFailure | fail;
+        }
+        try {
+            if (loadFailure) {
+                backupDFS(dir);
+            } else {
+                FileUtils.deleteDirectory(dir);
+            }
+            FileUtils.deleteDirectory(copyDir);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    static void backupDFS(File dir) {
+        try {
+            System.out.println("fail to load target dir: " + new File(failureDir, dir.getName()) + "\n");
+            FileUtils.moveDirectory(dir, new File(failureDir, dir.getName()));
+        } catch (IOException e) {
+            System.out.println("Failed in renaming " + dir);
+        }
     }
 
     static Boolean checkDuplication(Matcher m) {
@@ -122,9 +135,9 @@ public class Monitor {
         while (m.find()) {
             key += m.group(1);
         }
-        if( exceptionSet.contains(key) ){
-        return true;
-        }else{
+        if (exceptionSet.contains(key)) {
+            return true;
+        } else {
             exceptionSet.add(key);
             return false;
         }

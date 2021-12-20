@@ -64,7 +64,7 @@ public class Reproduce {
     static {
         // SnapshotTestHelper.disableLogs();
         // GenericTestUtils.disableLog(LoggerFactory.getLogger(NameNode.class));
-        LogManager.getRootLogger().setLevel(Level.OFF);
+        // LogManager.getRootLogger().setLevel(Level.OFF);
     }
 
     public void loadCommands(String id) throws IOException {
@@ -80,7 +80,7 @@ public class Reproduce {
             commands.add(Command.parseCommand(cmd.split(" ")));
             // }
         }
-        String currentLine = reader.readLine();
+        // String currentLine = reader.readLine();
         reader.close();
     }
 
@@ -135,7 +135,7 @@ public class Reproduce {
                         commandLog += "CMD " + Integer.toString(++commandIndex) + ":\n" + cmdString + "\nresult: ";
                         int res = _cmd.execute(conf);
                         commandLog += Integer.toString(res);
-                        System.out.println(_cmd.toString() + "\n" + res);
+                        // System.out.println(_cmd.toString() + "\n" + res);
                     } catch (Exception e) {
                         // TODO Auto-generated catch block
                         e.printStackTrace();

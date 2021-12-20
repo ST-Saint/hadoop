@@ -2,6 +2,7 @@ package org.apache.hadoop.hdfs.server.namenode.upgradefuzzing;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Random;
 
 import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.Commands.Command;
 import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.Commands.CommandsEnum;
@@ -27,6 +28,12 @@ import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.DFSCommands.rmdirCo
 
 public class CommandGenerator {
     RandomSource rnd;
+
+    CommandGenerator() {
+        byte[] b = new byte[512];
+        new Random(System.currentTimeMillis()).nextBytes(b);
+        this.rnd = new RandomSource(b);
+    }
 
     CommandGenerator(InputStream is) throws IOException {
         this.rnd = new RandomSource(is);

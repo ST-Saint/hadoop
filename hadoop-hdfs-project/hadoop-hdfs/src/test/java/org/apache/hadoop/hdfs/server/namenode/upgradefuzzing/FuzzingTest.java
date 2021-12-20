@@ -103,7 +103,6 @@ public class FuzzingTest {
     }
 
     public static void pretest() throws Exception {
-
         System.out.println("pretest: start minicluster");
         minicluster = new MiniCluster();
         minicluster.startCluster();
@@ -151,7 +150,7 @@ public class FuzzingTest {
         }
         minicluster.mkdirs(new Path(workdir, "subdir" + Integer.toString(++fuzzingIndex)));
         FsShell shell = null;
-        CommandGenerator fsg = new CommandGenerator(input);
+        final CommandGenerator fsg = new CommandGenerator(input);
         // commandLog = "";
         // ExecutorService executor = Executors.newSingleThreadExecutor();
         for (int i = 0; i < 20; ++i) {
@@ -177,7 +176,7 @@ public class FuzzingTest {
                 };
                 Long startTime = System.currentTimeMillis(), endTime;
                 thread.start();
-                thread.join(20000);
+                thread.join(60000);
                 if (thread.isAlive()) {
                     thread.interrupt();
                     commandLog += "TIMEOUT";

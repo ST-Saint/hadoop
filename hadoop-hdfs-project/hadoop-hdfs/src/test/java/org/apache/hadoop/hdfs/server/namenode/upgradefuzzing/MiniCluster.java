@@ -4,6 +4,7 @@ package org.apache.hadoop.hdfs.server.namenode.upgradefuzzing;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY;
+
 import static org.junit.Assert.assertEquals;
 
 import java.io.BufferedReader;
@@ -23,11 +24,15 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.upgradefuzzing.Commands.Command;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 
 public class MiniCluster {
     Configuration conf;
@@ -39,6 +44,7 @@ public class MiniCluster {
     private String dataNodePort = "127.0.0.1:10242";
     private String dataNodeIPCPort = "127.0.0.1:10243";
     private String dataNodeHttpPort = "127.0.0.1:10244";
+    static String DFS_NAMENODE_HTTP_ADDRESS_KEY = "dfs.namenode.http-address";
 
     static final long seed = 0;
     static final short NUM_DATANODES = 1;
@@ -50,13 +56,24 @@ public class MiniCluster {
 
     public static final String HDFS_MINIDFS_BASEDIR = "hdfs.minidfs.basedir";
 
-    public static final String miniclusterRoot = "/home/yayu/tmp/minicluster/minicluster-0";
+    public static String miniclusterRoot = "/home/yayu/tmp/minicluster/minicluster-0";
     public static final int directoryMaxDepth = 3;
     public static final int suffixBound = 10;
-    public static final int localFileLengthLimit = 1024;
+    public static final int localFileLengthLimit = 10240;
 
     public void startCluster() throws IOException, InterruptedException {
-        conf = new Configuration();
+        startCluster(miniclusterRoot, new Configuration());
+    }
+
+    public void startCluster(String root) throws IOException, InterruptedException {
+        startCluster(root, new Configuration());
+    }
+
+    public void startCluster(Configuration conf) throws IOException, InterruptedException {
+        startCluster(miniclusterRoot, conf);
+    }
+
+    public void startCluster(String root, Configuration conf) throws IOException, InterruptedException {
         // conf.set("hadoop.tmp.dir", "/home/yayu/tmp/hdfs-" + "0");
         FileUtils.deleteDirectory(new File(miniclusterRoot));
         conf.set(HDFS_MINIDFS_BASEDIR, miniclusterRoot);
@@ -74,6 +91,11 @@ public class MiniCluster {
         cluster.waitActive();
         fsn = cluster.getNamesystem();
         hdfs = cluster.getFileSystem();
+        // System.out.println("namenode port: " + cluster.getNameNodePort() + " " + cluster.getHttpUri(0));
+        // System.out.println("datanode " + cluster.getDataNodes().get(0).getIpcPort() + " "
+        //         + cluster.getDataNodes().get(0).getDataPort() + " " + cluster.getDataNodes().get(0).getRpcPort() + " "
+        //         + cluster.getDataNodes().get(0).getDatanodeHostname());
+
         // Thread.sleep(10000);
         // shutDown();
     }
@@ -118,17 +140,52 @@ public class MiniCluster {
         // try {
         cluster = builder.build();
         cluster.waitActive();
+        System.out.println("namenode port: " + cluster.getNameNodePort());
+        System.out.println("datanode " + cluster.getDataNodes().get(0).getHttpPort());
+        String localhost = "127.0.0.1";
+        String namenodePort = localhost + ":" + cluster.getNameNodePort();
+        String[] httpURI = cluster.getHttpUri(0).split(":");
+        String namenodeHttpPort = localhost + ":" + httpURI[httpURI.length - 1];
+        System.out.println("Get namenode Port: " + namenodePort + " " + namenodeHttpPort);
+        conf.set(FS_DEFAULT_NAME_KEY, namenodePort);
+        conf.set(DFS_NAMENODE_HTTP_ADDRESS_KEY, namenodeHttpPort);
+        // String datanodePort = localhost + ":" + cluster.getDataNodes().get(0).getDataPort();
+        // String datanodeIpcPort = localhost + ":" + cluster.getDataNodes().get(0).getIpcPort();
+
+        StringBuilder commandLog = new StringBuilder();
+        Integer commandIndex = 0;
+        FsShell shell = null;
+        CommandGenerator fsg = new CommandGenerator();
+        for (int i = 0; i < 20; ++i) {
+            try {
+                Thread thread = new CommandThread(commandLog, fsg, conf, commandIndex);
+                Long startTime = System.currentTimeMillis(), endTime;
+                thread.start();
+                thread.join(600000);
+                if (thread.isAlive()) {
+                    thread.interrupt();
+                    commandLog.append("TIMEOUT");
+                }
+                endTime = System.currentTimeMillis();
+                commandLog.append("\ntime usage: " + Double.toString((endTime - startTime) / 1000.) + "\n");
+            } finally {
+                if (shell != null) {
+                    shell.close();
+                }
+            }
+        }
+        System.out.println("commands:\n" + commandLog);
         try {
             assertEquals(1, cluster.getNumNameNodes());
             assertEquals(1, cluster.getDataNodes().size());
         } catch (AssertionError e) {
             shutDown();
-            System.exit(1);
+            // System.exit(1);
         }
         fsn = cluster.getNamesystem();
         hdfs = cluster.getFileSystem();
         if (cmdLine.hasOption("exit")) {
-            System.exit(0);
+            // System.exit(0);
         }
         shutDown();
     }
@@ -164,7 +221,8 @@ public class MiniCluster {
             Thread.sleep(2000);
             fz.tearDown();
         } else if (cmdLine.hasOption("alive")) {
-            startCluster();
+            miniclusterRoot = cmdLine.getOptionValue("basePath", miniclusterRoot);
+            startCluster(miniclusterRoot);
         } else if (cmdLine.hasOption("rollingupgrade")) {
             String targetDir = cmdLine.getOptionValue("basePath", "/home/yayu/tmp/minicluster/minicluster-0");
             if (cmdLine.hasOption("copy")) {
@@ -185,23 +243,58 @@ public class MiniCluster {
         }
     }
 
-    public void mkdirs(Path dir) throws IOException {
-        hdfs.mkdirs(dir);
+    public Boolean mkdirs(Path dir) throws IOException {
+        return hdfs.mkdirs(dir);
     }
 
-    public void mkdirs(String dir) throws IllegalArgumentException, IOException {
-        hdfs.mkdirs(new Path(dir));
+    public Boolean mkdirs(String dir) throws IllegalArgumentException, IOException {
+        return hdfs.mkdirs(new Path(dir));
     }
 
     public static void main(String[] argv) throws Exception {
-
         MiniCluster minicluster = new MiniCluster();
         minicluster.start(argv);
     }
 
+    private final class CommandThread extends Thread {
+        private StringBuilder commandLog;
+        private final CommandGenerator fsg;
+        private final Configuration conf;
+        private Integer commandIndex;
+
+        private CommandThread(StringBuilder commandLog, CommandGenerator fsg, Configuration conf,
+                Integer commandIndex) {
+            this.commandLog = commandLog;
+            this.fsg = fsg;
+            this.conf = conf;
+            this.commandIndex = commandIndex;
+        }
+
+        @Override
+        public void run() {
+            try {
+                Command cmd;
+                cmd = fsg.generate();
+                String cmdString = String.join(" ", cmd.generate());
+                synchronized (commandLog) {
+                    commandLog.append("CMD " + Integer.toString(++commandIndex) + ":\n" + cmdString + "\nresult: ");
+                }
+                int res = cmd.execute(conf);
+                synchronized (commandLog) {
+                    commandLog.append(Integer.toString(res));
+                }
+                // System.out.println("CMD " + Integer.toString(commandIndex) + ":\n" + cmdString + "\nresult: "
+                //         + Integer.toString(res) + "\n");
+            } catch (Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+    }
+
     public static class PrepareLocalSource {
         static String localPrefix = FuzzingTest.localResource;
-        static Random rnd = new Random();
+        static Random rnd = new Random(System.currentTimeMillis());
 
         public static String generateLocalFile() {
             String filePath = generateLocalDir() + "file" + Integer.toString(rnd.nextInt(suffixBound));
@@ -244,7 +337,8 @@ public class MiniCluster {
                 FileUtils.deleteDirectory(localSnapshotCopyDir);
             }
             localSnapshotDir.mkdirs();
-            for (int i = 0; i < 256; ++i) {
+            Integer fileNum = rnd.nextInt(16);
+            for (int i = 0; i < fileNum; ++i) {
                 String filePath = generateLocalFile();
                 createLocalFile(filePath);
             }
