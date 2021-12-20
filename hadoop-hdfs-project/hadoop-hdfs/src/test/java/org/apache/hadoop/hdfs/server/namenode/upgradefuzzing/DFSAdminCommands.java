@@ -59,4 +59,12 @@ public class DFSAdminCommands {
             add(generateHdfsDir());
         }
     }
+
+    public static class rollingUpgradePrepare() extends DFSAdminCommand{
+        rollingUpgradePrepare(RandomSource rand){
+            super(rand);
+            cmd = "-rollingUpgrade prepare";
+            options = new String[0];
+        }
+    }
 }

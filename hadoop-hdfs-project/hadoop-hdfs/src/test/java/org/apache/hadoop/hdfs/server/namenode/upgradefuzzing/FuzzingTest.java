@@ -56,7 +56,7 @@ public class FuzzingTest {
     static String localResource = "/home/yayu/tmp/localresource/localsrc/";
     static String localResourceCopy = "/home/yayu/tmp/localresource/localsrc.cpy/";
     static String localResourceRepro = "/home/yayu/tmp/localresource/localsrc[%s-%s]/";
-    static File logPath = new File("/home/yayu/Project/Upgrade-Fuzzing/hadoop/branch-3.1.3/fuzz-results/logs");
+    static File logPath = new File("/home/yayu/Project/Upgrade-Fuzzing/hadoop/branch-2.10.1/fuzz-results/logs");
     static File resourcePath = new File("/home/yayu/tmp/localresource");
 
     static Configuration conf;
